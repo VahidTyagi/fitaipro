@@ -1,13 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+// TEMPORARY Prisma disable (no DB yet)
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+let prisma: any = null;
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: ["query"],
-  });
+if (process.env.NODE_ENV === "development") {
+  console.warn("⚠️ Prisma is disabled (no database configured)");
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+export { prisma };
