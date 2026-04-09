@@ -8,16 +8,10 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "FitAI Pro — Your AI-Powered Fitness Coach",
-  description:
-    "Transform your fitness journey with personalized AI workouts, nutrition plans, and real-time coaching.",
-  keywords: "AI fitness, workout planner, nutrition, personal trainer",
+  description: "Transform your fitness journey with personalized AI workouts, nutrition plans, and real-time coaching.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider>
       <html lang="en">

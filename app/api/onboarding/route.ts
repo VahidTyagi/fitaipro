@@ -22,9 +22,9 @@ export async function POST(req: Request) {
       height,
     } = body;
 
-    const user = await prisma.user.update({
+    const user = await prisma.user.upsert({
       where: { clerkId: userId },
-      data: {
+      update: {
         goal,
         fitnessLevel,
         workoutType,
@@ -34,6 +34,20 @@ export async function POST(req: Request) {
         targetWeight: targetWeight ? parseFloat(targetWeight) : null,
         height: height ? parseFloat(height) : null,
         onboardingDone: true,
+      },
+      create: {
+        clerkId: userId,
+        email: "",
+        goal,
+        fitnessLevel,
+        workoutType,
+        dietType,
+        age: age ? parseInt(age) : null,
+        currentWeight: currentWeight ? parseFloat(currentWeight) : null,
+        targetWeight: targetWeight ? parseFloat(targetWeight) : null,
+        height: height ? parseFloat(height) : null,
+        onboardingDone: true,
+        trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
 
