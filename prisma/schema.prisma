@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  clerkId     String   @unique
+  email       String   @unique
+  name        String?
+  imageUrl    String?
+  plan        String   @default("free")
+  trialStart  DateTime @default(now())
+  trialEnd    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  goal           String?
+  fitnessLevel   String?
+  workoutType    String?
+  dietType       String?
+  targetWeight   Float?
+  currentWeight  Float?
+  height         Float?
+  age            Int?
+  onboardingDone Boolean  @default(false)
+  workouts   Workout[]
+  meals      Meal[]
+  progress   Progress[]
+}
+
+model Workout {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  type        String
+  level       String
+  duration    Int
+  calories    Int?
+  exercises   Json
+  aiGenerated Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Meal {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  calories  Int
+  protein   Float
+  carbs     Float
+  fat       Float
+  mealType  String
+  day       Int?
+  loggedAt  DateTime @default(now())
+}
+
+model Progress {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weight    Float?
+  bodyFat   Float?
+  notes     String?
+  loggedAt  DateTime @default(now())
+}
