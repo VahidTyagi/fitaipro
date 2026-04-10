@@ -26,7 +26,8 @@ export default async function SettingsPage() {
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
         <h2 className="text-white font-bold mb-4">Profile</h2>
         <div className="flex items-center gap-4">
-          <UserButton afterSignOutUrl="/" />
+        // CORRECT
+        <UserButton />
           <div>
             <p className="text-white font-medium">{dbUser.name || "User"}</p>
             <p className="text-gray-400 text-sm">{dbUser.email}</p>
