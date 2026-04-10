@@ -61,7 +61,7 @@ export default async function SettingsPage() {
             { label: "Goal", value: dbUser.goal?.replace("_", " ") || "—" },
             { label: "Level", value: dbUser.fitnessLevel || "—" },
             { label: "Workout Type", value: dbUser.workoutType?.replace(/_/g, " ") || "—" },
-            { label: "Diet", value: dbUser.dietType?.replace("_", " ") || "—" },
+            { label: "Dieting", value: dbUser.dietType?.replace("_", " ") || "—" },
             { label: "Height", value: dbUser.height ? `${dbUser.height} cm` : "—" },
             { label: "Weight", value: dbUser.currentWeight ? `${dbUser.currentWeight} kg` : "—" },
           ].map((item) => (
