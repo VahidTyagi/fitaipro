@@ -43,13 +43,14 @@ export default function NutritionPage() {
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    // Check trial status
-    fetch("/api/stats")
+    fetch("/api/user/plan")
       .then((r) => r.json())
-      .then(() => {
-        // trial info comes from layout, just try generating
+      .then((data) => {
+        setTrialActive(data.trialActive);
+        setDaysLeft(data.daysLeft);
         setChecked(true);
-      });
+      })
+      .catch(() => setChecked(true));
   }, []);
 
   const generatePlan = async () => {

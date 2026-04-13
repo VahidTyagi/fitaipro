@@ -8,16 +8,17 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  clerkId     String   @unique
-  email       String   @unique
-  name        String?
-  imageUrl    String?
-  plan        String   @default("free")
-  trialStart  DateTime @default(now())
-  trialEnd    DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String    @id @default(cuid())
+  clerkId       String    @unique
+  email         String    @unique
+  name          String?
+  imageUrl      String?
+  plan          String    @default("free")
+  trialStart    DateTime  @default(now())
+  trialEnd      DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   goal           String?
   fitnessLevel   String?
   workoutType    String?
@@ -27,9 +28,19 @@ model User {
   height         Float?
   age            Int?
   onboardingDone Boolean  @default(false)
+
+  razorpayCustomerId     String?
+  razorpaySubscriptionId String?
+  razorpayPaymentId      String?
+  subscriptionStatus     String?
+  subscriptionPlan       String?
+  subscriptionStart      DateTime?
+  subscriptionEnd        DateTime?
+
   workouts   Workout[]
   meals      Meal[]
   progress   Progress[]
+  payments   Payment[]
 }
 
 model Workout {
@@ -69,4 +80,18 @@ model Progress {
   bodyFat   Float?
   notes     String?
   loggedAt  DateTime @default(now())
+}
+
+model Payment {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  razorpaySignature String?
+  amount            Int
+  currency          String   @default("INR")
+  status            String
+  plan              String
+  createdAt         DateTime @default(now())
 }
