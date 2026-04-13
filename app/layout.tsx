@@ -13,16 +13,24 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "FitAI Pro — Your AI-Powered Fitness Coach",
-  description: "Transform your fitness journey with personalized AI workouts, nutrition plans, and real-time coaching.",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "FitAI Pro",
+  title: "FitAI Pro — AI Fitness Coach | Free Workouts + Personalized Plans",
+  description: "Get personalized AI workout plans, Indian meal plans, and real-time coaching. Home workout, gym workout, and equipment workouts. 7-day free diet plan. Join free.",
+  keywords: "AI fitness app India, free workout app, home workout India, gym workout AI, diet plan India, fitness tracker, weight loss app India",
+  openGraph: {
+    title: "FitAI Pro — Your AI-Powered Fitness Coach",
+    description: "Free AI workouts + 7-day Indian diet plan. No credit card needed.",
+    url: "https://fitaipro-five.vercel.app",
+    siteName: "FitAI Pro",
+    type: "website",
   },
-  icons: {
-    apple: "/icon-192.png",
+  twitter: {
+    card: "summary_large_image",
+    title: "FitAI Pro — AI Fitness Coach",
+    description: "Free AI workouts for India. Home, gym & equipment workouts.",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 

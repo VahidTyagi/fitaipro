@@ -41,17 +41,20 @@ export default function NutritionPage() {
   const [daysLeft, setDaysLeft] = useState(7);
   const [selectedDay, setSelectedDay] = useState(1);
   const [checked, setChecked] = useState(false);
+  const [isPaid, setIsPaid] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/user/plan")
-      .then((r) => r.json())
-      .then((data) => {
-        setTrialActive(data.trialActive);
-        setDaysLeft(data.daysLeft);
-        setChecked(true);
-      })
-      .catch(() => setChecked(true));
-  }, []);
+ // Replace the useEffect and trial banner with this:
+useEffect(() => {
+  fetch("/api/user/plan")
+    .then((r) => r.json())
+    .then((data) => {
+      setTrialActive(data.trialActive);
+      setDaysLeft(data.daysLeft);
+      setIsPaid(data.isPaid);
+      setChecked(true);
+    })
+    .catch(() => setChecked(true));
+}, []);
 
   const generatePlan = async () => {
     setGenerating(true);
@@ -115,14 +118,20 @@ export default function NutritionPage() {
       </div>
 
       {/* Trial Banner */}
-      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
-        <p className="text-emerald-400 text-sm font-medium">
-          🎁 Free trial active — {daysLeft} day{daysLeft !== 1 ? "s" : ""} left. After trial, upgrade to keep diet plans.
-        </p>
-        <Link href="/pricing" className="text-emerald-400 text-xs hover:text-emerald-300 underline">
-          See plans
-        </Link>
-      </div>
+      {trialActive && (
+  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
+    <p className="text-emerald-400 text-sm font-medium">
+      {isPaid
+        ? `✅ Pro Plan Active — ${daysLeft} day${daysLeft !== 1 ? "s" : ""} remaining`
+        : `🎁 Free trial — ${daysLeft} day${daysLeft !== 1 ? "s" : ""} left. Upgrade to keep diet plans after trial.`}
+    </p>
+    {!isPaid && (
+      <Link href="/pricing" className="text-emerald-400 text-xs hover:text-emerald-300 underline">
+        Upgrade →
+      </Link>
+    )}
+  </div>
+)}
 
       {/* Empty State */}
       {!mealPlan && !generating && (

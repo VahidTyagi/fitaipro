@@ -8,6 +8,14 @@ export interface Exercise {
     instructions: string[];
     tips: string;
   }
+
+  // Multiple GIF sources for reliability
+export function getExerciseGifUrl(gifId: string): string[] {
+  return [
+    `https://v2.exercisedb.io/image/${gifId}.gif`,
+    `https://exercisedb.io/image/${gifId}.gif`,
+  ];
+}
   
   // GIF URL generator
   export function getGifUrl(gifId: string): string {
@@ -150,6 +158,83 @@ export interface Exercise {
       ],
       tips: "Land softly to protect your joints.",
     },
+
+    // ─── MORE HOME NO EQUIPMENT ───
+  {
+    id: "tricep_dip_chair",
+    name: "Chair Tricep Dips",
+    muscle: "Triceps",
+    equipment: "bodyweight",
+    type: "home_no_equipment",
+    gifId: "0066",
+    instructions: [
+      "Sit on edge of chair, hands gripping seat beside hips",
+      "Slide off edge, supporting weight on hands",
+      "Lower body by bending elbows to 90 degrees",
+      "Push back up to starting position",
+    ],
+    tips: "Keep back close to the chair throughout.",
+  },
+  {
+    id: "high_knees",
+    name: "High Knees",
+    muscle: "Cardio",
+    equipment: "bodyweight",
+    type: "home_no_equipment",
+    gifId: "0082",
+    instructions: [
+      "Stand with feet hip-width apart",
+      "Run in place driving knees as high as possible",
+      "Pump arms in rhythm with legs",
+      "Land softly on balls of feet",
+    ],
+    tips: "Keep core tight and chest up.",
+  },
+  {
+    id: "superman",
+    name: "Superman Hold",
+    muscle: "Back",
+    equipment: "bodyweight",
+    type: "home_no_equipment",
+    gifId: "0045",
+    instructions: [
+      "Lie face down with arms extended overhead",
+      "Simultaneously lift arms, chest, and legs off floor",
+      "Hold at the top for 2 seconds",
+      "Lower back down with control",
+    ],
+    tips: "Squeeze glutes and back at the top position.",
+  },
+  {
+    id: "wall_sit",
+    name: "Wall Sit",
+    muscle: "Legs",
+    equipment: "bodyweight",
+    type: "home_no_equipment",
+    gifId: "0050",
+    instructions: [
+      "Stand with back against wall",
+      "Slide down until thighs parallel to floor",
+      "Knees directly above ankles",
+      "Hold for required time",
+    ],
+    tips: "Push back into wall. Don't let knees cave in.",
+  },
+  {
+    id: "crunches",
+    name: "Crunches",
+    muscle: "Abs",
+    equipment: "bodyweight",
+    type: "home_no_equipment",
+    gifId: "0009",
+    instructions: [
+      "Lie on back, knees bent, feet flat",
+      "Place hands behind head lightly",
+      "Curl upper body toward knees",
+      "Lower back with control",
+    ],
+    tips: "Don't pull your neck. Use your core to crunch.",
+  },
   
     // ─── HOME WITH EQUIPMENT ──────────────────────────────
     {
@@ -242,6 +327,54 @@ export interface Exercise {
       ],
       tips: "Slight knee bend. Feel the stretch in hamstrings.",
     },
+
+
+  // ─── MORE HOME WITH EQUIPMENT ───
+  {
+    id: "db_lateral_raise",
+    name: "Lateral Raises",
+    muscle: "Shoulders",
+    equipment: "dumbbell",
+    type: "home_with_equipment",
+    gifId: "0190",
+    instructions: [
+      "Hold dumbbells at sides, slight elbow bend",
+      "Raise arms out to sides until parallel to floor",
+      "Pause at top, then lower with control",
+      "Keep core tight throughout",
+    ],
+    tips: "Lead with elbows not hands. Don't shrug.",
+  },
+  {
+    id: "db_chest_fly",
+    name: "Dumbbell Chest Fly",
+    muscle: "Chest",
+    equipment: "dumbbell",
+    type: "home_with_equipment",
+    gifId: "0180",
+    instructions: [
+      "Lie on back, dumbbells above chest",
+      "Open arms wide with slight elbow bend",
+      "Feel the chest stretch at the bottom",
+      "Bring dumbbells back together in arc motion",
+    ],
+    tips: "Think of hugging a tree. Control the stretch.",
+  },
+  {
+    id: "db_lunge",
+    name: "Dumbbell Lunges",
+    muscle: "Legs",
+    equipment: "dumbbell",
+    type: "home_with_equipment",
+    gifId: "0210",
+    instructions: [
+      "Hold dumbbells at sides",
+      "Step forward with one leg",
+      "Lower back knee toward floor",
+      "Push through front heel to return",
+    ],
+    tips: "Keep torso upright. Don't let front knee cave.",
+  },
   
     // ─── GYM ──────────────────────────────────────────────
     {
@@ -364,7 +497,72 @@ export interface Exercise {
       ],
       tips: "Keep elbows locked to your sides throughout.",
     },
+
+
+  // ─── MORE GYM ───
+  {
+    id: "cable_row",
+    name: "Seated Cable Row",
+    muscle: "Back",
+    equipment: "cable",
+    type: "gym",
+    gifId: "0238",
+    instructions: [
+      "Sit at cable machine, feet on platform",
+      "Grip handle with both hands",
+      "Pull handle to lower chest/abdomen",
+      "Squeeze back, then slowly extend arms",
+    ],
+    tips: "Don't round your back. Pull with your elbows.",
+  },
+  {
+    id: "incline_press",
+    name: "Incline Dumbbell Press",
+    muscle: "Chest",
+    equipment: "dumbbell",
+    type: "gym",
+    gifId: "0177",
+    instructions: [
+      "Set bench to 30-45 degree incline",
+      "Hold dumbbells at chest level",
+      "Press up and slightly together",
+      "Lower with control to stretch",
+    ],
+    tips: "Targets upper chest. Don't go too steep.",
+  },
+  {
+    id: "leg_curl",
+    name: "Leg Curl Machine",
+    muscle: "Legs",
+    equipment: "machine",
+    type: "gym",
+    gifId: "0057",
+    instructions: [
+      "Lie face down on leg curl machine",
+      "Position pad just above heels",
+      "Curl legs up toward glutes",
+      "Lower slowly back to start",
+    ],
+    tips: "Don't arch lower back. Control the lowering phase.",
+  },
+  {
+    id: "face_pull",
+    name: "Face Pulls",
+    muscle: "Shoulders",
+    equipment: "cable",
+    type: "gym",
+    gifId: "0085",
+    instructions: [
+      "Set cable at face height",
+      "Pull rope toward face, elbows high",
+      "Externally rotate at end position",
+      "Slowly return to start",
+    ],
+    tips: "Great for shoulder health and posture.",
+  },
   ];
+
+  
   
   // Get exercises by workout type
   export function getExercisesByType(type: string): Exercise[] {

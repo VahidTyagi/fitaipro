@@ -6,8 +6,7 @@ import toast from "react-hot-toast";
 import { Zap } from "lucide-react";
 
 interface Props {
-  plan: "pro" | "elite";
-  price: string;
+  planKey: string;
   label?: string;
   className?: string;
 }
@@ -16,7 +15,7 @@ declare global {
   interface Window { Razorpay: any; }
 }
 
-export default function PaymentButton({ plan, price, label, className }: Props) {
+export default function PaymentButton({ planKey, label, className }: Props) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -26,7 +25,7 @@ export default function PaymentButton({ plan, price, label, className }: Props) 
       const res = await fetch("/api/payment/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ planKey }),
       });
       if (!res.ok) throw new Error("Failed to create order");
       const orderData = await res.json();
@@ -40,7 +39,12 @@ export default function PaymentButton({ plan, price, label, className }: Props) 
         order_id: orderData.orderId,
         prefill: orderData.prefill,
         theme: { color: "#10b981" },
-        modal: { ondismiss: () => { setLoading(false); toast.error("Payment cancelled"); } },
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+            toast.error("Payment cancelled");
+          },
+        },
         handler: async (response: any) => {
           try {
             const verifyRes = await fetch("/api/payment/verify", {
@@ -50,16 +54,19 @@ export default function PaymentButton({ plan, price, label, className }: Props) 
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                plan,
+                plan: orderData.plan,
+                billingCycle: orderData.billingCycle,
               }),
             });
+
             if (!verifyRes.ok) throw new Error("Verification failed");
-            toast.success(`🎉 Welcome to FitAI ${plan.charAt(0).toUpperCase() + plan.slice(1)}!`);
-            router.refresh();
-            router.push("/dashboard");
+
+            toast.success(`🎉 Welcome to FitAI ${orderData.plan.charAt(0).toUpperCase() + orderData.plan.slice(1)}!`);
+
+            // Force full page reload to update all dashboard state
+            window.location.href = "/dashboard";
           } catch {
             toast.error("Payment verification failed. Contact support.");
-          } finally {
             setLoading(false);
           }
         },
@@ -89,7 +96,7 @@ export default function PaymentButton({ plan, price, label, className }: Props) 
         ) : (
           <span className="flex items-center gap-2">
             <Zap className="w-4 h-4" />
-            {label || `Upgrade to ${plan} — ${price}`}
+            {label || "Upgrade Now"}
           </span>
         )}
       </button>

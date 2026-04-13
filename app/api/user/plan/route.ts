@@ -1,21 +1,27 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getSubscriptionStatus } from "@/lib/subscription";
 
 export async function GET() {
   try {
     const { userId } = await auth();
-    if (!userId) return NextResponse.json({ trialActive: false, daysLeft: 0 });
+    if (!userId) return NextResponse.json({ trialActive: false, daysLeft: 0, isPaid: false, plan: "free" });
+
     const dbUser = await prisma.user.findUnique({ where: { clerkId: userId } });
-    if (!dbUser) return NextResponse.json({ trialActive: false, daysLeft: 0 });
+    if (!dbUser) return NextResponse.json({ trialActive: false, daysLeft: 0, isPaid: false, plan: "free" });
 
-    const trialEnd = dbUser.trialEnd ? new Date(dbUser.trialEnd) : null;
-    const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
-    const isPaid = dbUser.plan === "pro" || dbUser.plan === "elite";
-    const trialActive = daysLeft > 0 || isPaid;
+    const status = getSubscriptionStatus(dbUser);
 
-    return NextResponse.json({ trialActive, daysLeft, isPaid, plan: dbUser.plan });
+    return NextResponse.json({
+      trialActive: status.isTrialActive,
+      daysLeft: status.daysLeft,
+      isPaid: status.isPaid,
+      plan: status.plan,
+      label: status.label,
+      subscriptionEnd: status.subscriptionEnd,
+    });
   } catch {
-    return NextResponse.json({ trialActive: false, daysLeft: 0 });
+    return NextResponse.json({ trialActive: false, daysLeft: 0, isPaid: false, plan: "free" });
   }
 }

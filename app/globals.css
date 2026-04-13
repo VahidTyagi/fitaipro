@@ -5,3 +5,18 @@
 body {
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Fix charts overflow on mobile */
+.recharts-responsive-container {
+  min-width: 0 !important;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better tap targets on mobile */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
