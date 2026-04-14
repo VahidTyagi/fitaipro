@@ -6,6 +6,8 @@ export default function Footer() {
     <footer className="bg-gray-950 text-gray-400 py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+
+          {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
@@ -21,52 +23,48 @@ export default function Footer() {
             <p className="text-sm">Made with 💚 in India</p>
           </div>
 
-          // Replace the Legal section in Footer.tsx
-<div>
-  <h4 className="text-white font-semibold mb-4">Legal</h4>
-  <ul className="space-y-2 text-sm">
-    <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-    <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
-    <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-  </ul>
-</div>
-
+          {/* Product */}
           <div>
-            <h4 className="text-white font-semibold mb-4">Company</h4>
+            <h4 className="text-white font-semibold mb-4">Product</h4>
             <ul className="space-y-2 text-sm">
-              {["About", "Blog", "Careers"].map((item) => (
-                <li key={item}>
-                  <a href="#" className="hover:text-white transition-colors">
-                    {item}
-                  </a>
-                </li>
-              ))}
+              <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+              <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
+              <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
             </ul>
           </div>
 
+          {/* Company */}
+          <div>
+            <h4 className="text-white font-semibold mb-4">Company</h4>
+            <ul className="space-y-2 text-sm">
+              <li><a href="#" className="hover:text-white transition-colors">About</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+              <li>
+                <Link
+                  href="https://www.linkedin.com/company/fitai-pro"
+                  target="_blank"
+                  className="hover:text-white transition-colors"
+                >
+                  LinkedIn
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Legal */}
           <div>
             <h4 className="text-white font-semibold mb-4">Legal</h4>
             <ul className="space-y-2 text-sm">
-              {["Privacy Policy", "Terms of Service"].map((item) => (
-                <li key={item}>
-                  <a href="#" className="hover:text-white transition-colors">
-                    {item}
-                  </a>
-                </li>
-              ))}
+              <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm">© 2025 FitAI Pro. All rights reserved.</p>
-          <Link
-            href="https://www.linkedin.com/company/fitai-pro"
-            target="_blank"
-            className="text-sm hover:text-white transition-colors"
-          >
-            LinkedIn →
-          </Link>
+          <p className="text-sm">© 2026 FitAI Pro. All rights reserved.</p>
+          <p className="text-sm text-gray-600">Secure payments by Razorpay</p>
         </div>
       </div>
     </footer>

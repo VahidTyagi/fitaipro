@@ -41,6 +41,15 @@ model User {
   meals      Meal[]
   progress   Progress[]
   payments   Payment[]
+
+  // AI Coach rate limiting
+  chatMessagesUsed  Int       @default(0)
+  chatResetDate     DateTime?
+
+  // Nutrition plan tracking
+  nutritionPlanDays        Int?
+  nutritionPlanGeneratedAt DateTime?
+  nutritionPlanData        Json?
 }
 
 model Workout {

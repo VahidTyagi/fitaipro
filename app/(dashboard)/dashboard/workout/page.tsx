@@ -1,5 +1,7 @@
 "use client";
+import { sounds } from "@/lib/soundEffects";
 import { useState } from "react";
+
 import {
   Home, Dumbbell, Building2, ChevronRight,
   Clock, Flame, BarChart3, Zap, CheckCircle,
@@ -106,8 +108,12 @@ export default function WorkoutPage() {
   const toggleExerciseDone = (exerciseId: string) => {
     setCompletedExercises((prev) => {
       const next = new Set(prev);
-      if (next.has(exerciseId)) next.delete(exerciseId);
-      else next.add(exerciseId);
+      if (next.has(exerciseId)) {
+        next.delete(exerciseId);
+      } else {
+        next.add(exerciseId);
+        sounds.exerciseDone(); // ← add this
+      }
       return next;
     });
   };
@@ -122,6 +128,7 @@ export default function WorkoutPage() {
         body: JSON.stringify({ workoutId }),
       });
       setWorkoutCompleted(true);
+      sounds.workoutComplete();
       toast.success("Workout completed! Great job! 🏆");
     } catch {
       toast.error("Failed to save completion");
@@ -428,7 +435,7 @@ export default function WorkoutPage() {
           </div>
 
           <button
-            onClick={() => setWorkoutStarted(true)}
+            onClick={() => { sounds.workoutStart(); setWorkoutStarted(true); }}
             className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-4 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all text-lg flex items-center justify-center gap-2"
           >
             <Zap className="w-5 h-5" /> Start Workout
