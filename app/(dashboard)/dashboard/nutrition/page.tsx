@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Lock, RefreshCw, Apple, Flame, Zap, Droplets, ChevronLeft, ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import MealPhotoAnalyzer from "@/components/dashboard/MealPhotoAnalyzer";
 
 interface Meal {
   type: string;
@@ -162,6 +163,8 @@ export default function NutritionPage() {
       </div>
 
       {/* Status Banner */}
+      {/* Meal Photo Analyzer */}
+<MealPhotoAnalyzer isPaid={userPlan.isPaid} isTrialActive={userPlan.trialActive} />
       <div className={`rounded-2xl p-4 border ${userPlan.isPaid
         ? "bg-emerald-500/10 border-emerald-500/20"
         : "bg-amber-500/10 border-amber-500/20"}`}>

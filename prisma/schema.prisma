@@ -47,9 +47,9 @@ model User {
   chatResetDate     DateTime?
 
   // Nutrition plan tracking
-  nutritionPlanDays        Int?
-  nutritionPlanGeneratedAt DateTime?
   nutritionPlanData        Json?
+  nutritionPlanGeneratedAt DateTime?
+  nutritionPlanDays        Int?
 }
 
 model Workout {
@@ -79,6 +79,8 @@ model Meal {
   mealType  String
   day       Int?
   loggedAt  DateTime @default(now())
+  photoUrl  String?
+  aiAnalyzed Boolean @default(false)
 }
 
 model Progress {

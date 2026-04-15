@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSubscriptionStatus } from "@/lib/subscription";
 import Link from "next/link";
+import ProgressPrediction from "@/components/dashboard/ProgressPrediction";
+
+
+
 import {
   Dumbbell,
   Flame,
@@ -31,6 +35,7 @@ export default async function DashboardPage() {
   if (!dbUser.onboardingDone) redirect("/onboarding");
 
   // ✅ Use unified subscription logic
+  const totalWorkoutsDone = dbUser.workouts?.length || 0;
   const status = getSubscriptionStatus(dbUser);
   const { isPaid, isTrialActive, daysLeft, plan } = status;
 
@@ -246,6 +251,14 @@ export default async function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Progress Prediction */}
+<ProgressPrediction
+  currentWeight={dbUser.currentWeight}
+  targetWeight={dbUser.targetWeight}
+  goal={dbUser.goal}
+  workoutsDone={totalWorkoutsDone}
+/>
 
       {/* Recent Workouts */}
       {dbUser.workouts.length > 0 && (

@@ -4,6 +4,9 @@ import { NextResponse } from "next/server";
 import { getSubscriptionStatus } from "@/lib/subscription";
 
 async function callAI(prompt: string): Promise<string> {
+  const errors: string[] = [];
+
+  // Try Groq first
   if (process.env.GROQ_API_KEY) {
     try {
       const Groq = (await import("groq-sdk")).default;
@@ -14,17 +17,28 @@ async function callAI(prompt: string): Promise<string> {
         temperature: 0.7,
         max_tokens: 4000,
       });
-      return completion.choices[0]?.message?.content || "";
-    } catch { console.log("Groq failed, trying Gemini..."); }
+      const text = completion.choices[0]?.message?.content || "";
+      if (text) return text;
+    } catch (e: any) {
+      errors.push(`Groq: ${e.message}`);
+    }
   }
+
+  // Try Gemini
   if (process.env.GEMINI_API_KEY) {
-    const { GoogleGenerativeAI } = await import("@google/generative-ai");
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    try {
+      const { GoogleGenerativeAI } = await import("@google/generative-ai");
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      if (text) return text;
+    } catch (e: any) {
+      errors.push(`Gemini: ${e.message}`);
+    }
   }
-  throw new Error("No AI API configured");
+
+  throw new Error(`All AI providers failed: ${errors.join("; ")}`);
 }
 
 function getPlanDays(plan: string, isTrialActive: boolean): number {
@@ -47,28 +61,18 @@ export async function POST(req: Request) {
     if (planDays === 0) {
       return NextResponse.json({
         error: "access_denied",
-        message: "Your free trial has ended. Upgrade to Pro to generate diet plans.",
+        message: "Upgrade to Pro to generate diet plans.",
         upgradeRequired: true,
       }, { status: 403 });
     }
 
-    // Check if can regenerate today
-    const lastGenerated = dbUser.nutritionPlanGeneratedAt
-      ? new Date(dbUser.nutritionPlanGeneratedAt)
-      : null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Return cached plan if exists and not forcing regeneration
+    const body = await req.json().catch(() => ({}));
+    const forceRegenerate = body.force === true;
 
-    const canRegenerate = !lastGenerated || lastGenerated < today;
-
-    // If plan already exists and can't regenerate, return cached plan
-    if (!canRegenerate && dbUser.nutritionPlanData) {
-      return NextResponse.json({
-        success: true,
-        mealPlan: dbUser.nutritionPlanData,
-        cached: true,
-        nextRegenerate: "Tomorrow",
-      });
+    if (!forceRegenerate && dbUser.nutritionPlanData) {
+      const planData = dbUser.nutritionPlanData as any;
+      return NextResponse.json({ success: true, mealPlan: planData, cached: true });
     }
 
     const goal = dbUser.goal || "stay_fit";
@@ -77,38 +81,51 @@ export async function POST(req: Request) {
     const targetWeight = dbUser.targetWeight || 65;
     const isWeightLoss = targetWeight < currentWeight;
 
-    // Generate correct number of days
-    const daysToGenerate = planDays;
-    const prompt = `You are an expert Indian nutritionist. Create a ${daysToGenerate}-day meal plan.
-USER: Goal: ${goal.replace(/_/g, " ")}, Diet: ${dietType}, Current: ${currentWeight}kg, Target: ${targetWeight}kg
-RULES:
-- Use authentic Indian foods (dal, roti, sabzi, paneer, chicken, fish, sprouts, idli etc.)
-- Include breakfast, lunch, snack, dinner for EACH of the ${daysToGenerate} days
-- Vary meals across days - no repetition for at least 5 days
-- Daily calories: ${isWeightLoss ? "1600-1800" : "2200-2500"} kcal
-- High protein focus
-${dietType === "vegetarian" ? "- STRICTLY NO meat or fish" : ""}
-${dietType === "vegan" ? "- STRICTLY NO dairy, meat, or eggs" : ""}
-- Include exact quantities (e.g., "2 rotis", "1 bowl", "100g")
-Respond ONLY with valid JSON, absolutely no other text:
+    const dietInstruction = {
+      vegetarian: "STRICTLY vegetarian. Use paneer, dal, curd, cheese, eggs optional. NO meat or fish.",
+      non_vegetarian: "Include chicken, fish, eggs. Also use dal, paneer, curd.",
+      vegan: "STRICTLY vegan. NO dairy, NO eggs, NO meat. Use tofu, plant milk, legumes.",
+      no_preference: "Mix of vegetarian and non-vegetarian Indian foods.",
+    }[dietType] || "Use healthy Indian foods.";
+
+    const prompt = `You are an expert Indian nutritionist. Create a ${planDays}-day personalized meal plan.
+
+USER PROFILE:
+- Goal: ${goal.replace(/_/g, " ")}
+- Diet Type: ${dietType} — ${dietInstruction}
+- Current Weight: ${currentWeight}kg, Target: ${targetWeight}kg
+- Direction: ${isWeightLoss ? "WEIGHT LOSS" : "MUSCLE GAIN"}
+
+STRICT RULES:
+1. Use ONLY authentic Indian foods with Indian names
+2. ${planDays} days total — variety across all days
+3. 4 meals per day: Breakfast, Lunch, Snack, Dinner
+4. Daily calories: ${isWeightLoss ? "1400-1700" : "2200-2600"} kcal
+5. High protein: ${isWeightLoss ? "80-100g" : "120-150g"} daily
+6. Include exact quantity (e.g., "2 rotis", "1 katori dal", "100g chicken")
+7. ${dietInstruction}
+
+Respond ONLY with this exact JSON format, no extra text:
 {
-  "targetCalories": 1700,
-  "targetProtein": 120,
-  "planDays": ${daysToGenerate},
+  "targetCalories": 1600,
+  "targetProtein": 90,
+  "planDays": ${planDays},
+  "dietType": "${dietType}",
   "days": [
     {
       "day": 1,
-      "totalCalories": 1680,
-      "totalProtein": 95,
+      "totalCalories": 1580,
+      "totalProtein": 88,
       "meals": [
         {
           "type": "Breakfast",
-          "name": "Moong dal chilla with green chutney",
+          "name": "Moong dal chilla with mint chutney",
           "calories": 320,
           "protein": 18,
           "carbs": 42,
           "fat": 6,
-          "quantity": "2 chillas + 2 tbsp chutney"
+          "quantity": "2 chillas + 2 tbsp chutney",
+          "prepTime": "15 mins"
         }
       ]
     }
@@ -117,10 +134,11 @@ Respond ONLY with valid JSON, absolutely no other text:
 
     const responseText = await callAI(prompt);
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("Invalid AI response");
+    if (!jsonMatch) throw new Error("AI returned invalid format");
+
     const mealPlan = JSON.parse(jsonMatch[0]);
 
-    // Save plan to DB so user can reload without regenerating
+    // Save to DB
     await prisma.user.update({
       where: { id: dbUser.id },
       data: {
@@ -131,8 +149,11 @@ Respond ONLY with valid JSON, absolutely no other text:
     });
 
     return NextResponse.json({ success: true, mealPlan, cached: false });
-  } catch (error) {
-    console.error("Nutrition error:", error);
-    return NextResponse.json({ error: "Failed to generate meal plan" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Nutrition generation error:", error);
+    return NextResponse.json({
+      error: "Failed to generate meal plan",
+      details: error.message,
+    }, { status: 500 });
   }
 }

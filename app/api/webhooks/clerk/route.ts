@@ -6,10 +6,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
-
-  if (!WEBHOOK_SECRET) {
-    return NextResponse.json({ error: "No webhook secret" }, { status: 400 });
-  }
+  if (!WEBHOOK_SECRET) return NextResponse.json({ error: "No secret" }, { status: 400 });
 
   const headerPayload = await headers();
   const svix_id = headerPayload.get("svix-id");
@@ -17,12 +14,11 @@ export async function POST(req: Request) {
   const svix_signature = headerPayload.get("svix-signature");
 
   if (!svix_id || !svix_timestamp || !svix_signature) {
-    return NextResponse.json({ error: "Missing svix headers" }, { status: 400 });
+    return NextResponse.json({ error: "Missing headers" }, { status: 400 });
   }
 
   const payload = await req.json();
   const body = JSON.stringify(payload);
-
   const wh = new Webhook(WEBHOOK_SECRET);
   let evt: WebhookEvent;
 
@@ -38,25 +34,38 @@ export async function POST(req: Request) {
 
   if (evt.type === "user.created") {
     const { id, email_addresses, first_name, last_name, image_url } = evt.data;
-    const email = email_addresses[0]?.email_address;
-    const name = [first_name, last_name].filter(Boolean).join(" ");
+    const email = email_addresses[0]?.email_address || "";
+    // Build full name properly
+    const nameParts = [first_name, last_name].filter(Boolean);
+    const name = nameParts.length > 0 ? nameParts.join(" ") : email.split("@")[0];
 
-    await prisma.user.create({
-      data: {
+    await prisma.user.upsert({
+      where: { clerkId: id },
+      update: { name, imageUrl: image_url || null },
+      create: {
         clerkId: id,
-        email: email || "",
-        name: name || null,
+        email,
+        name,
         imageUrl: image_url || null,
-        trialStart: new Date(),
-        trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
   }
 
+  if (evt.type === "user.updated") {
+    const { id, first_name, last_name, image_url } = evt.data;
+    const nameParts = [first_name, last_name].filter(Boolean);
+    const name = nameParts.length > 0 ? nameParts.join(" ") : null;
+
+    await prisma.user.updateMany({
+      where: { clerkId: id },
+      data: { name, imageUrl: image_url || null },
+    });
+  }
+
   if (evt.type === "user.deleted") {
-    const { id } = evt.data;
-    if (id) {
-      await prisma.user.deleteMany({ where: { clerkId: id } });
+    if (evt.data.id) {
+      await prisma.user.deleteMany({ where: { clerkId: evt.data.id } });
     }
   }
 
