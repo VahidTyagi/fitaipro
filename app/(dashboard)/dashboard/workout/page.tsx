@@ -48,7 +48,7 @@ interface WorkoutExercise {
   exerciseId: string;
   name: string;
   muscle: string;
-  gifId: string | null;
+  gifUrl: string | null;
   instructions: string[];
   tips: string;
   sets: number;
@@ -289,7 +289,7 @@ export default function WorkoutPage() {
                 {isExpanded && (
                   <div className="px-4 pb-4 border-t border-gray-800 pt-4">
                     <div className="grid sm:grid-cols-2 gap-4">
-                      <ExerciseGif gifId={ex.gifId} name={ex.name} muscle={ex.muscle} />
+                    <ExerciseGif gifUrl={ex.gifUrl} name={ex.name} muscle={ex.muscle} />
                       <div className="space-y-3">
                         <div>
                           <p className="text-emerald-400 text-xs font-semibold mb-2">HOW TO DO IT</p>
