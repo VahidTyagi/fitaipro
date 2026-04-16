@@ -41,6 +41,7 @@ model User {
   meals      Meal[]
   progress   Progress[]
   payments   Payment[]
+  dailyCalories  DailyCalories[]
 
   // AI Coach rate limiting
   chatMessagesUsed  Int       @default(0)
@@ -81,6 +82,21 @@ model Meal {
   loggedAt  DateTime @default(now())
   photoUrl  String?
   aiAnalyzed Boolean @default(false)
+}
+
+model DailyCalories {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           String   // YYYY-MM-DD format
+  caloriesBurned Int      @default(0)
+  caloriesEaten  Int      @default(0)
+  netCalories    Int      @default(0) // burned - eaten (negative = deficit = weight loss)
+  workoutDone    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, date])
 }
 
 model Progress {

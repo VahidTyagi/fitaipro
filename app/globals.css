@@ -2,21 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
+/* Base */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
-/* Fix charts overflow on mobile */
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Tap targets */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+}
+
+/* Fix Clerk modal on mobile */
+.cl-modalContent {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  border-radius: 16px 16px 0 0 !important;
+}
+
+@media (min-width: 640px) {
+  .cl-modalContent {
+    width: auto !important;
+    max-width: 480px !important;
+    margin: auto !important;
+    border-radius: 16px !important;
+  }
+}
+
+/* Fix Clerk card on small screens */
+.cl-card {
+  width: 100% !important;
+  border-radius: 16px !important;
+}
+
+/* Charts responsive fix */
 .recharts-responsive-container {
   min-width: 0 !important;
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #111827; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+
+/* Dashboard mobile sidebar fix */
+@media (max-width: 768px) {
+  main { padding: 16px !important; }
 }
 
-/* Better tap targets on mobile */
-button, a {
-  -webkit-tap-highlight-color: transparent;
+/* Fix overflow on small screens */
+.max-w-6xl, .max-w-4xl, .max-w-3xl, .max-w-2xl {
+  width: 100%;
 }

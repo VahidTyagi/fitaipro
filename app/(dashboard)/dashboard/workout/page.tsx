@@ -48,7 +48,8 @@ interface WorkoutExercise {
   exerciseId: string;
   name: string;
   muscle: string;
-  gifUrl: string | null;
+  muscleGroup: string;
+  gifUrl: string | null;        // ← was gifId
   instructions: string[];
   tips: string;
   sets: number;
@@ -56,7 +57,6 @@ interface WorkoutExercise {
   rest: string;
   notes?: string;
 }
-
 interface GeneratedWorkout {
   title: string;
   duration: number;

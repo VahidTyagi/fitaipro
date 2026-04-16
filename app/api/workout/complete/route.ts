@@ -2,6 +2,10 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+function getTodayDate(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
 export async function POST(req: Request) {
   try {
     const { userId } = await auth();
@@ -17,9 +21,40 @@ export async function POST(req: Request) {
       data: { completedAt: new Date() },
     });
 
-    return NextResponse.json({ success: true, workout });
-  } catch (error) {
-    console.error("Complete workout error:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    // Auto-track calories burned
+    const caloriesBurned = workout.calories || 0;
+    const today = getTodayDate();
+
+    if (caloriesBurned > 0) {
+      const existing = await prisma.dailyCalories.findUnique({
+        where: { userId_date: { userId: dbUser.id, date: today } },
+      });
+
+      if (existing) {
+        await prisma.dailyCalories.update({
+          where: { userId_date: { userId: dbUser.id, date: today } },
+          data: {
+            caloriesBurned: existing.caloriesBurned + caloriesBurned,
+            netCalories: (existing.caloriesBurned + caloriesBurned) - existing.caloriesEaten,
+            workoutDone: true,
+          },
+        });
+      } else {
+        await prisma.dailyCalories.create({
+          data: {
+            userId: dbUser.id,
+            date: today,
+            caloriesBurned,
+            caloriesEaten: 0,
+            netCalories: caloriesBurned,
+            workoutDone: true,
+          },
+        });
+      }
+    }
+
+    return NextResponse.json({ success: true, workout, caloriesBurned });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

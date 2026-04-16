@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSubscriptionStatus } from "@/lib/subscription";
 import Link from "next/link";
 import ProgressPrediction from "@/components/dashboard/ProgressPrediction";
+import CalorieTracker from "@/components/dashboard/CalorieTracker";
 
 
 
@@ -115,6 +116,7 @@ export default async function DashboardPage() {
 
       {/* Live Stats */}
       <DashboardStats />
+      <CalorieTracker />
 
       {/* My Fitness Profile */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">

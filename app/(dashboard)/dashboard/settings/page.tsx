@@ -73,8 +73,8 @@ export default async function SettingsPage() {
             <div className="bg-gray-800/50 rounded-xl p-4">
               <p className="text-gray-400 text-sm">
                 To cancel your subscription, email us at{" "}
-                <a href="mailto:support@fitaipro.com" className="text-emerald-400 hover:underline">
-                  support@fitaipro.com
+                <a href="mailto:vahidtyagi007@gmail.com" className="text-emerald-400 hover:underline">
+                vahidtyagi007@gmail.com
                 </a>
               </p>
             </div>

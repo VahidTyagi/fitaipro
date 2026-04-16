@@ -41,11 +41,15 @@ async function callAI(prompt: string): Promise<string> {
   throw new Error(`All AI providers failed: ${errors.join("; ")}`);
 }
 
+// Replace the getPlanDays and prompt section:
+
 function getPlanDays(plan: string, isTrialActive: boolean): number {
   if (plan === "pro" || plan === "elite") return 30;
   if (isTrialActive) return 7;
   return 0;
 }
+
+
 
 export async function POST(req: Request) {
   try {
