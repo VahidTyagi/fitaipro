@@ -16,6 +16,7 @@ export async function POST(req: Request) {
       fitnessLevel,
       workoutType,
       dietType,
+      gender, // ✅ added
       age,
       currentWeight,
       targetWeight,
@@ -29,6 +30,7 @@ export async function POST(req: Request) {
         fitnessLevel,
         workoutType,
         dietType,
+        gender, // ✅ added
         age: age ? parseInt(age) : null,
         currentWeight: currentWeight ? parseFloat(currentWeight) : null,
         targetWeight: targetWeight ? parseFloat(targetWeight) : null,
@@ -42,6 +44,7 @@ export async function POST(req: Request) {
         fitnessLevel,
         workoutType,
         dietType,
+        gender, // ✅ added
         age: age ? parseInt(age) : null,
         currentWeight: currentWeight ? parseFloat(currentWeight) : null,
         targetWeight: targetWeight ? parseFloat(targetWeight) : null,

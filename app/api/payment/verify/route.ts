@@ -8,11 +8,19 @@ export async function POST(req: Request) {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan, billingCycle } = await req.json();
+    const body = await req.json();
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      plan,
+      billingCycle,
+    } = body;
 
+    // Verify signature
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
-      .update(razorpay_order_id + "|" + razorpay_payment_id)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
@@ -22,15 +30,18 @@ export async function POST(req: Request) {
     const dbUser = await prisma.user.findUnique({ where: { clerkId: userId } });
     if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-    // Calculate correct subscription end date
     const subscriptionStart = new Date();
     const subscriptionEnd = new Date();
+
+    // Set correct end date based on billing cycle
     if (billingCycle === "yearly") {
       subscriptionEnd.setFullYear(subscriptionEnd.getFullYear() + 1);
     } else {
-      subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+      // Monthly — exactly 30 days
+      subscriptionEnd.setDate(subscriptionEnd.getDate() + 30);
     }
 
+    // Update user
     await prisma.user.update({
       where: { id: dbUser.id },
       data: {
@@ -40,11 +51,12 @@ export async function POST(req: Request) {
         subscriptionStart,
         subscriptionEnd,
         razorpayPaymentId: razorpay_payment_id,
-        // Also extend trial so nutrition page shows correctly
+        // Also update trialEnd to match subscriptionEnd so nutrition page works correctly
         trialEnd: subscriptionEnd,
       },
     });
 
+    // Update payment record
     await prisma.payment.updateMany({
       where: { razorpayOrderId: razorpay_order_id },
       data: {
@@ -54,9 +66,14 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, plan, subscriptionEnd });
-  } catch (error) {
-    console.error("Verify error:", error);
-    return NextResponse.json({ error: "Payment verification failed" }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      plan,
+      billingCycle: billingCycle || "monthly",
+      subscriptionEnd: subscriptionEnd.toISOString(),
+    });
+  } catch (error: any) {
+    console.error("Verify payment error:", error);
+    return NextResponse.json({ error: "Payment verification failed", details: error.message }, { status: 500 });
   }
 }

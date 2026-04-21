@@ -18,10 +18,14 @@ export async function GET() {
       daysLeft: status.daysLeft,
       isPaid: status.isPaid,
       plan: status.plan,
+      billingCycle: status.billingCycle,
       label: status.label,
-      subscriptionEnd: status.subscriptionEnd,
+      nutritionDays: status.nutritionDays,
+      chatLimit: status.chatLimit,
+      subscriptionEnd: status.subscriptionEnd?.toISOString() || null,
     });
-  } catch {
+  } catch (error: any) {
+    console.error("User plan error:", error);
     return NextResponse.json({ trialActive: false, daysLeft: 0, isPaid: false, plan: "free" });
   }
 }

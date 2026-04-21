@@ -47,7 +47,15 @@ export default function NutritionPage() {
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [generating, setGenerating] = useState(false);
   const [selectedDay, setSelectedDay] = useState(1);
-  const [userPlan, setUserPlan] = useState({ trialActive: true, daysLeft: 7, isPaid: false, plan: "free" });
+  const [userPlan, setUserPlan] = useState({
+    trialActive: true,
+    daysLeft: 7,
+    isPaid: false,
+    plan: "free",
+    billingCycle: null as string | null,
+    nutritionDays: 7,
+    subscriptionEnd: null as string | null,
+  });
   const [accessDenied, setAccessDenied] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -165,15 +173,24 @@ export default function NutritionPage() {
       {/* Status Banner */}
       {/* Meal Photo Analyzer */}
 <MealPhotoAnalyzer isPaid={userPlan.isPaid} isTrialActive={userPlan.trialActive} />
-      <div className={`rounded-2xl p-4 border ${userPlan.isPaid
-        ? "bg-emerald-500/10 border-emerald-500/20"
-        : "bg-amber-500/10 border-amber-500/20"}`}>
-        <p className={`text-sm font-medium ${userPlan.isPaid ? "text-emerald-400" : "text-amber-400"}`}>
-          {userPlan.isPaid
-            ? `✅ Pro Plan Active — ${mealPlan?.planDays || 30}-day plan. Renew monthly for a fresh plan.`
-            : `🎁 Free trial — ${userPlan.daysLeft} day${userPlan.daysLeft !== 1 ? "s" : ""} left. After trial, diet plans require Pro.`}
-        </p>
-      </div>
+<div className={`rounded-2xl p-4 border ${
+  userPlan.isPaid
+    ? "bg-emerald-500/10 border-emerald-500/20"
+    : "bg-amber-500/10 border-amber-500/20"
+}`}>
+  <p className={`text-sm font-medium ${userPlan.isPaid ? "text-emerald-400" : "text-amber-400"}`}>
+    {userPlan.isPaid ? (
+      <>
+        ✅ {userPlan.plan.charAt(0).toUpperCase() + userPlan.plan.slice(1)} Plan Active
+        {userPlan.billingCycle === "yearly" ? " (Yearly)" : " (Monthly)"}
+        {" — "}{userPlan.daysLeft} days remaining
+        {userPlan.subscriptionEnd && ` · Renews ${new Date(userPlan.subscriptionEnd).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`}
+      </>
+    ) : (
+      `🎁 Free trial — ${userPlan.daysLeft} day${userPlan.daysLeft !== 1 ? "s" : ""} left. After trial, diet plans require Pro.`
+    )}
+  </p>
+</div>
 
       {/* Generating state */}
       {generating && (
