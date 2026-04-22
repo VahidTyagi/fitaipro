@@ -139,15 +139,14 @@ Respond ONLY with valid JSON:
     const workoutPlan = JSON.parse(jsonMatch[0]);
 
     const enrichedExercises = workoutPlan.exercises.map((ex: any) => {
-      const exerciseData = availableExercises.find(
-        (e) => e.id === ex.exerciseId
-      );
+      const exerciseData = availableExercises.find((e) => e.id === ex.exerciseId);
       return {
         ...ex,
         name: exerciseData?.name || ex.exerciseId,
         muscle: exerciseData?.muscle || "Full Body",
         muscleGroup: exerciseData?.muscleGroup || "full_body",
         gifUrl: exerciseData?.gifUrl || null,
+        exerciseId: ex.exerciseId, // ← ensure this is always set
         instructions: exerciseData?.instructions || [],
         tips: exerciseData?.tips || "",
       };

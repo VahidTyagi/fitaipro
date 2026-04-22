@@ -165,10 +165,10 @@ export default async function SettingsPage() {
           Need help? Having issues? Contact us and we&apos;ll respond within 24 hours.
         </p>
         <a
-          href="mailto:vahidtyagi007@gmail.com"
+          href="mailto:fitaipro.official@gmail.com"
           className="text-emerald-400 text-sm hover:text-emerald-300 transition-colors"
         >
-          vahidtyagi007@gmail.com →
+          fitaipro.official@gmail.com →
         </a>
       </div>
     </div>
