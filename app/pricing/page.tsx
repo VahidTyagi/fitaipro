@@ -59,6 +59,7 @@ export default async function PricingPage() {
         { text: "Workout history export", included: true },
         { text: "Custom workout builder", included: true },
         { text: "1-on-1 AI sessions", included: false },
+        { text: "Custom lifestyle plan builder", included: true },
       ],
     },
     {
@@ -82,6 +83,8 @@ export default async function PricingPage() {
         { text: "Early feature access", included: true },
         { text: "WhatsApp coach support", included: true },
         { text: "Quarterly fitness review", included: true },
+        { text: "Custom lifestyle plan builder", included: true },
+        { text: "Multi-session workout planning (3x/day)", included: true },
       ],
     },
   ];

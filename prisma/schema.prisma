@@ -21,6 +21,8 @@ model User {
 
   gender  String?  // male | female
 
+  customSchedules  CustomSchedule[]
+
   goal           String?
   fitnessLevel   String?
   workoutType    String?
@@ -123,4 +125,16 @@ model Payment {
   status            String
   plan              String
   createdAt         DateTime @default(now())
+}
+
+model CustomSchedule {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String   // "My Daily Plan"
+  schedule    Json     // array of time blocks
+  aiDietPlan  Json?    // AI-generated diet based on schedule
+  aiNotes     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
