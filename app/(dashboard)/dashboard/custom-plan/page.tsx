@@ -1,27 +1,18 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  Plus, Trash2, Clock, Dumbbell, Utensils, Briefcase,
-  Footprints, Moon, Coffee, Zap, ChevronDown, ChevronUp,
-  Sparkles, Lock, RefreshCw, CheckCircle, AlertCircle
+  Sparkles, Clock, Plus, Trash2, Dumbbell, Utensils,
+  Briefcase, Moon, Footprints, Coffee, ChevronDown,
+  ChevronUp, Lock, RefreshCw, CheckCircle, AlertCircle,
+  Target, Zap, Flame, TrendingDown, TrendingUp
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
 
-// ─── Types ────────────────────────────────────────
-type ActivityType =
-  | "wake"
-  | "exercise_gym"
-  | "exercise_home"
-  | "meal"
-  | "work"
-  | "commute"
-  | "walk"
-  | "sleep"
-  | "coffee"
-  | "other";
+type ActivityType = "wake" | "exercise_gym" | "exercise_home" | "meal" | "work" |
+  "commute" | "walk" | "sleep" | "coffee" | "study" | "rest" | "other";
 
-interface ScheduleBlock {
+interface Block {
   id: string;
   startTime: string;
   endTime: string;
@@ -31,131 +22,146 @@ interface ScheduleBlock {
 }
 
 interface GeneratedPlan {
+  headline: string;
   summary: string;
-  totalCaloriesNeeded: number;
-  proteinNeeded: number;
-  exerciseSummary: string;
-  mealTimings: {
-    time: string;
-    meal: string;
-    calories: number;
-    protein: number;
-    description: string;
-    reason: string;
-  }[];
-  workoutAdvice: {
-    session: string;
-    focus: string;
-    tip: string;
-  }[];
+  totalCalories: number;
+  proteinTarget: number;
+  goalTimeline: string;
+  estimatedWeeksToGoal: number;
+  mealTimings: { time: string; meal: string; calories: number; protein: number; reason: string }[];
+  workoutAdvice: { session: string; focus: string; tip: string; duration: string }[];
+  hourlyTimetable: { time: string; activity: string; note: string }[];
   hydration: string;
-  sleepAdvice: string;
-  weeklyGoal: string;
+  sleepScore: string;
+  weeklyMilestone: string;
   warnings: string[];
+  motivationNote: string;
 }
 
-// ─── Activity Config ──────────────────────────────
-const ACTIVITY_CONFIG: Record<ActivityType, {
-  label: string;
-  icon: React.ElementType;
-  color: string;
-  bgColor: string;
-  placeholder: string;
-  hasSteps?: boolean;
-}> = {
-  wake:          { label: "Wake Up",         icon: Zap,       color: "text-yellow-400",  bgColor: "bg-yellow-500/20 border-yellow-500/30",  placeholder: "Morning routine, freshen up..." },
-  exercise_gym:  { label: "Gym Workout",     icon: Dumbbell,  color: "text-red-400",     bgColor: "bg-red-500/20 border-red-500/30",        placeholder: "e.g. Chest + triceps, heavy weights" },
-  exercise_home: { label: "Home Workout",    icon: Dumbbell,  color: "text-orange-400",  bgColor: "bg-orange-500/20 border-orange-500/30",  placeholder: "e.g. HIIT, push-pull workout" },
-  meal:          { label: "Meal",            icon: Utensils,  color: "text-emerald-400", bgColor: "bg-emerald-500/20 border-emerald-500/30", placeholder: "e.g. 4 eggs + 2 roti, 250g chicken..." },
-  work:          { label: "Work / Study",    icon: Briefcase, color: "text-blue-400",    bgColor: "bg-blue-500/20 border-blue-500/30",       placeholder: "Office work, meetings...", hasSteps: true },
-  commute:       { label: "Commute",         icon: Footprints,color: "text-cyan-400",    bgColor: "bg-cyan-500/20 border-cyan-500/30",       placeholder: "By metro, bus, car...", hasSteps: true },
-  walk:          { label: "Walk",            icon: Footprints,color: "text-teal-400",    bgColor: "bg-teal-500/20 border-teal-500/30",       placeholder: "Evening walk, morning walk...", hasSteps: true },
-  sleep:         { label: "Sleep",           icon: Moon,      color: "text-purple-400",  bgColor: "bg-purple-500/20 border-purple-500/30",   placeholder: "Sleep time" },
-  coffee:        { label: "Coffee / Tea",    icon: Coffee,    color: "text-amber-400",   bgColor: "bg-amber-500/20 border-amber-500/30",     placeholder: "e.g. 1 black coffee no sugar" },
-  other:         { label: "Other",           icon: Clock,     color: "text-gray-400",    bgColor: "bg-gray-700/50 border-gray-600",          placeholder: "Describe activity..." },
+const TYPES: Record<ActivityType, { label: string; emoji: string; color: string; hasSteps?: boolean; placeholder: string }> = {
+  wake:          { label: "Wake Up",          emoji: "🌅", color: "bg-yellow-500/20 border-yellow-500/30",  placeholder: "Morning routine" },
+  exercise_gym:  { label: "Gym Workout",      emoji: "🏋️", color: "bg-red-500/20 border-red-500/30",        placeholder: "e.g. Chest+Back, legs..." },
+  exercise_home: { label: "Home Workout",     emoji: "💪", color: "bg-orange-500/20 border-orange-500/30",  placeholder: "e.g. HIIT, push-pull..." },
+  meal:          { label: "Meal / Eat",        emoji: "🍽️", color: "bg-emerald-500/20 border-emerald-500/30",placeholder: "e.g. 4 eggs, dal roti, chicken..." },
+  work:          { label: "Work / Office",     emoji: "💼", color: "bg-blue-500/20 border-blue-500/30",      placeholder: "Office, WFH...", hasSteps: true },
+  commute:       { label: "Commute",           emoji: "🚇", color: "bg-cyan-500/20 border-cyan-500/30",      placeholder: "Metro, bus, car...", hasSteps: true },
+  walk:          { label: "Walk",              emoji: "🚶", color: "bg-teal-500/20 border-teal-500/30",      placeholder: "Morning/evening walk...", hasSteps: true },
+  sleep:         { label: "Sleep",             emoji: "😴", color: "bg-purple-500/20 border-purple-500/30",  placeholder: "Sleep time" },
+  coffee:        { label: "Coffee / Tea",      emoji: "☕", color: "bg-amber-500/20 border-amber-500/30",    placeholder: "Black coffee, green tea..." },
+  study:         { label: "Study",             emoji: "📚", color: "bg-indigo-500/20 border-indigo-500/30",  placeholder: "Study, reading..." },
+  rest:          { label: "Rest / Relax",      emoji: "🛋️", color: "bg-gray-600/20 border-gray-600/30",     placeholder: "Break, TV, family time..." },
+  other:         { label: "Other",             emoji: "📌", color: "bg-gray-700/20 border-gray-700/30",      placeholder: "Describe activity..." },
 };
 
-const EXERCISE_TYPES: ActivityType[] = ["exercise_gym", "exercise_home"];
+let idSeq = 0;
+const uid = () => `b${Date.now()}${++idSeq}`;
 
-// ─── Helpers ──────────────────────────────────────
-let idCounter = 0;
-function uid() { return `block_${Date.now()}_${++idCounter}`; }
-
-function timeToMinutes(t: string) {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
-// ─── Component ────────────────────────────────────
 export default function CustomPlanPage() {
-  const [isPaid, setIsPaid] = useState<boolean | null>(null);
-  const [plan, setPlan] = useState<string>("free");
-
-  // Check plan on mount
-  useState(() => {
-    fetch("/api/user/plan")
-      .then(r => r.json())
-      .then(d => {
-        setIsPaid(d.isPaid);
-        setPlan(d.plan);
-      })
-      .catch(() => setIsPaid(false));
-  });
-
-  const [blocks, setBlocks] = useState<ScheduleBlock[]>([
-    { id: uid(), startTime: "06:00", endTime: "06:30", type: "wake",         detail: "Freshen up",                    steps: 0 },
-    { id: uid(), startTime: "06:30", endTime: "08:00", type: "exercise_gym", detail: "Full body gym session",          steps: 0 },
-    { id: uid(), startTime: "08:00", endTime: "09:00", type: "meal",         detail: "4 eggs + 2 toast + milk",       steps: 0 },
-    { id: uid(), startTime: "09:00", endTime: "10:00", type: "commute",      detail: "Office by metro",               steps: 1000 },
-    { id: uid(), startTime: "10:00", endTime: "14:00", type: "work",         detail: "Office work",                   steps: 1000 },
-    { id: uid(), startTime: "14:00", endTime: "15:00", type: "meal",         detail: "2 roti + 1 bowl rice + sabzi",  steps: 0 },
-    { id: uid(), startTime: "15:00", endTime: "19:00", type: "work",         detail: "Office work",                   steps: 1000 },
-    { id: uid(), startTime: "17:00", endTime: "17:15", type: "coffee",       detail: "1 black coffee no sugar",       steps: 0 },
-    { id: uid(), startTime: "19:00", endTime: "20:00", type: "commute",      detail: "Home by metro",                 steps: 1000 },
-    { id: uid(), startTime: "20:00", endTime: "21:00", type: "exercise_home",detail: "Home workout no equipment",     steps: 0 },
-    { id: uid(), startTime: "21:00", endTime: "22:00", type: "meal",         detail: "250g boiled chicken + salad",   steps: 0 },
-    { id: uid(), startTime: "22:00", endTime: "23:00", type: "walk",         detail: "Evening walk",                  steps: 2000 },
-    { id: uid(), startTime: "23:00", endTime: "06:00", type: "sleep",        detail: "Sleep",                         steps: 0 },
-  ]);
-
+  const [userPlan, setUserPlan] = useState({ isPaid: false, plan: "free", isTrialActive: false });
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [blocks, setBlocks] = useState<Block[]>([]);
   const [generating, setGenerating] = useState(false);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlan | null>(null);
-  const [expandedSection, setExpandedSection] = useState<string | null>("meals");
+  const [expanded, setExpanded] = useState<string>("meals");
+  const [loaded, setLoaded] = useState(false);
 
-  // ── Block Operations ──────────────────────────
-  const addBlock = () => {
-    const last = blocks[blocks.length - 1];
-    setBlocks([...blocks, {
-      id: uid(),
-      startTime: last?.endTime || "06:00",
-      endTime: last?.endTime || "07:00",
-      type: "other",
-      detail: "",
-      steps: 0,
-    }]);
-  };
+  useEffect(() => {
+    // Fetch user plan and profile
+    Promise.all([
+      fetch("/api/user/plan").then(r => r.json()),
+      fetch("/api/user/profile").then(r => r.json()),
+    ]).then(([plan, profile]) => {
+      setUserPlan(plan);
+      setUserProfile(profile);
 
-  const updateBlock = (id: string, updates: Partial<ScheduleBlock>) => {
-    setBlocks(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
-  };
+      // Pre-fill schedule based on their onboarding data
+      const wakeTime = profile.wakeTime || "07:00";
+      const sleepTime = profile.sleepTime || "23:00";
+      const workoutTime = profile.preferredWorkoutTime || "morning";
+
+      // Build a smart default schedule based on their preferences
+      const defaultBlocks = buildDefaultSchedule(wakeTime, sleepTime, workoutTime, profile);
+      setBlocks(defaultBlocks);
+      setLoaded(true);
+    }).catch(() => {
+      setBlocks(buildDefaultSchedule("07:00", "23:00", "morning", {}));
+      setLoaded(true);
+    });
+  }, []);
+
+  function buildDefaultSchedule(wakeTime: string, sleepTime: string, workoutTime: string, profile: any): Block[] {
+    const wb = [wakeTime] as string[];
+
+    // Smart schedule builder based on workout time preference
+    if (workoutTime === "morning" || workoutTime === "multiple") {
+      return [
+        { id: uid(), startTime: wakeTime, endTime: addHours(wakeTime, 0.5), type: "wake", detail: "Morning routine, freshen up", steps: 0 },
+        { id: uid(), startTime: addHours(wakeTime, 0.5), endTime: addHours(wakeTime, 2), type: profile.workoutType === "gym" ? "exercise_gym" : "exercise_home", detail: profile.workoutType === "gym" ? "Gym session" : "Morning workout", steps: 0 },
+        { id: uid(), startTime: addHours(wakeTime, 2), endTime: addHours(wakeTime, 3), type: "meal", detail: "Post-workout breakfast", steps: 0 },
+        { id: uid(), startTime: addHours(wakeTime, 4), endTime: addHours(wakeTime, 10), type: "work", detail: "Work / office", steps: 2000 },
+        { id: uid(), startTime: addHours(wakeTime, 10), endTime: addHours(wakeTime, 11), type: "meal", detail: "Lunch", steps: 0 },
+        { id: uid(), startTime: addHours(wakeTime, 11), endTime: addHours(wakeTime, 16), type: "work", detail: "Afternoon work", steps: 1000 },
+        { id: uid(), startTime: addHours(wakeTime, 16), endTime: addHours(wakeTime, 17), type: "meal", detail: "Evening snack", steps: 0 },
+        { id: uid(), startTime: addHours(wakeTime, 18), endTime: addHours(wakeTime, 19), type: "walk", detail: "Evening walk", steps: 3000 },
+        { id: uid(), startTime: addHours(wakeTime, 20), endTime: addHours(wakeTime, 21), type: "meal", detail: "Dinner", steps: 0 },
+        { id: uid(), startTime: sleepTime, endTime: wakeTime, type: "sleep", detail: "Sleep", steps: 0 },
+      ];
+    } else if (workoutTime === "evening" || workoutTime === "night") {
+      return [
+        { id: uid(), startTime: wakeTime, endTime: addHours(wakeTime, 0.5), type: "wake", detail: "Morning routine", steps: 0 },
+        { id: uid(), startTime: addHours(wakeTime, 0.5), endTime: addHours(wakeTime, 1.5), type: "meal", detail: "Breakfast", steps: 0 },
+        { id: uid(), startTime: addHours(wakeTime, 2), endTime: addHours(wakeTime, 10), type: "work", detail: "Work / office", steps: 3000 },
+        { id: uid(), startTime: addHours(wakeTime, 10), endTime: addHours(wakeTime, 11), type: "meal", detail: "Lunch", steps: 0 },
+        { id: uid(), startTime: addHours(wakeTime, 12), endTime: addHours(wakeTime, 17), type: "work", detail: "Afternoon work", steps: 1000 },
+        { id: uid(), startTime: addHours(wakeTime, 17.5), endTime: addHours(wakeTime, 19.5), type: profile.workoutType === "gym" ? "exercise_gym" : "exercise_home", detail: "Evening workout", steps: 0 },
+        { id: uid(), startTime: addHours(wakeTime, 20), endTime: addHours(wakeTime, 21), type: "meal", detail: "Post-workout dinner", steps: 0 },
+        { id: uid(), startTime: sleepTime, endTime: wakeTime, type: "sleep", detail: "Sleep", steps: 0 },
+      ];
+    }
+
+    // Default flexible schedule
+    return [
+      { id: uid(), startTime: wakeTime, endTime: addHours(wakeTime, 1), type: "wake", detail: "Morning routine", steps: 0 },
+      { id: uid(), startTime: addHours(wakeTime, 1), endTime: addHours(wakeTime, 2), type: "meal", detail: "Breakfast", steps: 0 },
+      { id: uid(), startTime: addHours(wakeTime, 3), endTime: addHours(wakeTime, 11), type: "work", detail: "Work", steps: 3000 },
+      { id: uid(), startTime: addHours(wakeTime, 11), endTime: addHours(wakeTime, 12), type: "meal", detail: "Lunch", steps: 0 },
+      { id: uid(), startTime: addHours(wakeTime, 15), endTime: addHours(wakeTime, 16.5), type: profile.workoutType === "gym" ? "exercise_gym" : "exercise_home", detail: "Workout", steps: 0 },
+      { id: uid(), startTime: addHours(wakeTime, 17), endTime: addHours(wakeTime, 18), type: "meal", detail: "Dinner", steps: 0 },
+      { id: uid(), startTime: sleepTime, endTime: wakeTime, type: "sleep", detail: "Sleep", steps: 0 },
+    ];
+  }
+
+  function addHours(time: string, hours: number): string {
+    const [h, m] = time.split(":").map(Number);
+    const total = h * 60 + m + hours * 60;
+    const newH = Math.floor(total / 60) % 24;
+    const newM = Math.round(total % 60);
+    return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
+  }
+
+  const updateBlock = (id: string, upd: Partial<Block>) =>
+    setBlocks(prev => prev.map(b => b.id === id ? { ...b, ...upd } : b));
 
   const removeBlock = (id: string) => {
-    if (blocks.length <= 2) { toast.error("Need at least 2 activities"); return; }
+    if (blocks.length <= 3) { toast.error("Need at least 3 activities"); return; }
     setBlocks(prev => prev.filter(b => b.id !== id));
   };
 
-  // Validation
-  const exerciseCount = blocks.filter(b => EXERCISE_TYPES.includes(b.type)).length;
-  const hasExercise = exerciseCount > 0;
-  const hasMeal = blocks.some(b => b.type === "meal");
-  const hasSleep = blocks.some(b => b.type === "sleep");
-  const tooManyExercises = exerciseCount > 3;
+  const addBlock = () => {
+    const last = blocks[blocks.length - 1];
+    setBlocks(prev => [...prev, {
+      id: uid(), startTime: last?.endTime || "12:00",
+      endTime: addHours(last?.endTime || "12:00", 1),
+      type: "other", detail: "", steps: 0,
+    }]);
+  };
 
-  // ── Generate Plan ─────────────────────────────
-  const generatePlan = async () => {
-    if (tooManyExercises) { toast.error("Maximum 3 exercise sessions per day"); return; }
-    if (!hasMeal) { toast.error("Add at least one meal to your schedule"); return; }
+  const exerciseCount = blocks.filter(b => b.type === "exercise_gym" || b.type === "exercise_home").length;
+  const totalSteps = blocks.reduce((s, b) => s + (b.steps || 0), 0);
+  const canGenerate = blocks.some(b => b.type === "meal") && exerciseCount <= 3;
 
+  const generate = async () => {
+    if (!canGenerate) { toast.error("Add at least one meal"); return; }
     setGenerating(true);
     try {
       const res = await fetch("/api/custom-plan/generate", {
@@ -164,47 +170,42 @@ export default function CustomPlanPage() {
         body: JSON.stringify({ schedule: blocks }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Generation failed");
+      if (!res.ok) throw new Error(data.details || data.error);
       setGeneratedPlan(data.plan);
-      toast.success("Your custom plan is ready! 🎉");
+      toast.success("Your personalized plan is ready! 🎉");
     } catch (e: any) {
-      toast.error(e.message || "Failed to generate. Try again.");
+      toast.error(e.message || "Failed. Check API keys.");
     } finally {
       setGenerating(false);
     }
   };
 
-  // ── Locked Screen ─────────────────────────────
-  if (isPaid === false) {
+  if (!loaded) {
     return (
-      <div className="max-w-lg mx-auto text-center py-16 px-4">
-        <div className="w-20 h-20 bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!userPlan.isPaid && !userPlan.isTrialActive) {
+    return (
+      <div className="max-w-md mx-auto text-center py-16 px-4">
+        <div className="w-20 h-20 bg-amber-500/20 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
           <Lock className="w-10 h-10 text-amber-400" />
         </div>
         <h1 className="text-2xl font-bold text-white mb-3">Custom Lifestyle Plan</h1>
         <p className="text-gray-400 mb-6 leading-relaxed">
-          Build a plan around your exact daily schedule — wake time, gym sessions, meals,
-          commute, work hours, and sleep. AI optimizes nutrition timing for your life.
+          Build a plan around your exact schedule. AI creates timetable, workouts, and meals optimized for your life.
         </p>
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-6 text-left space-y-2">
-          {[
-            "Schedule up to 3 workout sessions/day",
-            "AI meal timing around your workouts",
-            "Calorie targets based on your activity",
-            "Indian food meal suggestions",
-            "Steps & activity calorie calculation",
-            "Sleep optimization advice",
-          ].map(f => (
+          {["Personalized daily timetable", "Meal timing around your workouts", "Up to 3 exercise sessions/day", "Steps + calories calculated", "Goal timeline prediction", "Age & gender specific planning"].map(f => (
             <div key={f} className="flex items-center gap-2 text-sm text-gray-300">
-              <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              {f}
+              <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" /> {f}
             </div>
           ))}
         </div>
-        <Link
-          href="/pricing"
-          className="inline-block bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold px-8 py-3 rounded-full hover:from-emerald-600 hover:to-teal-600 transition-all"
-        >
+        <Link href="/pricing" className="inline-block bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold px-8 py-3 rounded-full">
           Upgrade to Pro — ₹125/month 🔥
         </Link>
       </div>
@@ -212,340 +213,330 @@ export default function CustomPlanPage() {
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="max-w-4xl space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-4">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-amber-400" />
-            Custom Lifestyle Plan
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-amber-400" /> Custom Lifestyle Plan
           </h1>
-          <p className="text-gray-400 text-sm">
-            Build your full day → AI optimizes nutrition & workout timing around your schedule
+          <p className="text-gray-400 text-sm mt-1">
+            Your schedule → AI creates personalized timetable + meals + workouts
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {tooManyExercises && (
-            <div className="flex items-center gap-1.5 text-red-400 text-xs bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-full">
-              <AlertCircle className="w-3.5 h-3.5" />
-              Max 3 exercises/day
-            </div>
-          )}
-          <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-full font-semibold capitalize">
-            {plan} Plan
+        <div className="flex items-center gap-2 text-xs">
+          <span className="bg-gray-900 border border-gray-700 px-3 py-1.5 rounded-full text-gray-300">
+            💪 {exerciseCount}/3 sessions
           </span>
+          <span className="bg-gray-900 border border-gray-700 px-3 py-1.5 rounded-full text-gray-300">
+            👣 {totalSteps.toLocaleString()} steps
+          </span>
+          {exerciseCount > 3 && (
+            <span className="bg-red-500/20 border border-red-500/30 px-3 py-1.5 rounded-full text-red-400">
+              ⚠️ Max 3 exercises
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Stats bar */}
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-        {[
-          { label: "Activities",  value: blocks.length,   color: "text-white" },
-          { label: "Exercise",    value: `${exerciseCount}/3`, color: exerciseCount > 3 ? "text-red-400" : "text-emerald-400" },
-          { label: "Meals",       value: blocks.filter(b => b.type === "meal").length,   color: "text-orange-400" },
-          { label: "Total Steps", value: `${blocks.reduce((s, b) => s + (b.steps || 0), 0).toLocaleString()}`, color: "text-blue-400" },
-          { label: "Sleep",       value: hasSleep ? "✓" : "—", color: hasSleep ? "text-purple-400" : "text-gray-500" },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
-            <p className={`font-bold text-lg ${color}`}>{value}</p>
-            <p className="text-gray-500 text-xs">{label}</p>
+      {/* User's onboarding summary if available */}
+      {userProfile && (userProfile.currentWeight || userProfile.goal) && (
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex flex-wrap items-center gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <Target className="w-4 h-4 text-emerald-400" />
+            <span className="text-gray-300 capitalize">{(userProfile.goal || "").replace(/_/g, " ")}</span>
           </div>
-        ))}
-      </div>
+          {userProfile.currentWeight && userProfile.targetWeight && (
+            <div className="flex items-center gap-2">
+              {userProfile.goal === "lose_weight" ? <TrendingDown className="w-4 h-4 text-blue-400" /> : <TrendingUp className="w-4 h-4 text-orange-400" />}
+              <span className="text-gray-300">{userProfile.currentWeight}kg → {userProfile.targetWeight}kg</span>
+            </div>
+          )}
+          {userProfile.age && (
+            <span className="text-gray-500 text-xs">Age {userProfile.age} · {userProfile.gender || "—"}</span>
+          )}
+        </div>
+      )}
 
       {/* Schedule Builder */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
           <h2 className="text-white font-bold">Your Daily Schedule</h2>
-          <span className="text-gray-500 text-xs">Drag to reorder (coming soon)</span>
+          <p className="text-gray-600 text-xs">Edit times, types & details for each activity</p>
         </div>
 
-        <div className="divide-y divide-gray-800/50">
-          {blocks.map((block, index) => {
-            const config = ACTIVITY_CONFIG[block.type];
-            const Icon = config.icon;
-
+        <div className="divide-y divide-gray-800/40">
+          {blocks.map((block) => {
+            const cfg = TYPES[block.type];
             return (
-              <div key={block.id} className="px-4 py-3 hover:bg-gray-800/30 transition-colors">
-                <div className="flex items-start gap-3">
-                  {/* Timeline dot */}
-                  <div className="flex flex-col items-center flex-shrink-0 mt-1">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${config.bgColor} border`}>
-                      <Icon className={`w-4 h-4 ${config.color}`} />
-                    </div>
-                    {index < blocks.length - 1 && (
-                      <div className="w-px h-4 bg-gray-700 mt-1" />
-                    )}
+              <div key={block.id} className="px-4 py-3 hover:bg-gray-800/20 transition-colors">
+                <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
+                  {/* Type icon */}
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${cfg.color} border`}>
+                    <span className="text-sm">{cfg.emoji}</span>
                   </div>
 
-                  {/* Content */}
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-2 items-start">
-                    {/* Time range */}
-                    <div className="sm:col-span-3 flex items-center gap-1">
-                      <input
-                        type="time"
-                        value={block.startTime}
-                        onChange={e => updateBlock(block.id, { startTime: e.target.value })}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-xs focus:outline-none focus:border-emerald-500"
-                      />
-                      <span className="text-gray-600 text-xs flex-shrink-0">→</span>
-                      <input
-                        type="time"
-                        value={block.endTime}
-                        onChange={e => updateBlock(block.id, { endTime: e.target.value })}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-xs focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
+                  {/* Times */}
+                  <input
+                    type="time"
+                    value={block.startTime}
+                    onChange={e => updateBlock(block.id, { startTime: e.target.value })}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-xs w-24 focus:outline-none focus:border-emerald-500"
+                  />
+                  <span className="text-gray-600 text-xs">→</span>
+                  <input
+                    type="time"
+                    value={block.endTime}
+                    onChange={e => updateBlock(block.id, { endTime: e.target.value })}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-xs w-24 focus:outline-none focus:border-emerald-500"
+                  />
 
-                    {/* Activity type */}
-                    <div className="sm:col-span-3">
-                      <select
-                        value={block.type}
-                        onChange={e => updateBlock(block.id, { type: e.target.value as ActivityType })}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-xs focus:outline-none focus:border-emerald-500"
-                      >
-                        {Object.entries(ACTIVITY_CONFIG).map(([key, cfg]) => (
-                          <option key={key} value={key}>{cfg.label}</option>
-                        ))}
-                      </select>
-                    </div>
+                  {/* Type */}
+                  <select
+                    value={block.type}
+                    onChange={e => updateBlock(block.id, { type: e.target.value as ActivityType })}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-xs focus:outline-none focus:border-emerald-500 w-36"
+                  >
+                    {Object.entries(TYPES).map(([k, v]) => (
+                      <option key={k} value={k}>{v.emoji} {v.label}</option>
+                    ))}
+                  </select>
 
-                    {/* Detail */}
-                    <div className="sm:col-span-4">
-                      <input
-                        type="text"
-                        value={block.detail}
-                        onChange={e => updateBlock(block.id, { detail: e.target.value })}
-                        placeholder={config.placeholder}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
+                  {/* Detail */}
+                  <input
+                    type="text"
+                    value={block.detail}
+                    onChange={e => updateBlock(block.id, { detail: e.target.value })}
+                    placeholder={cfg.placeholder}
+                    className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500"
+                  />
 
-                    {/* Steps (for walk/commute/work) */}
-                    <div className="sm:col-span-1">
-                      {config.hasSteps && (
-                        <input
-                          type="number"
-                          value={block.steps || ""}
-                          onChange={e => updateBlock(block.id, { steps: parseInt(e.target.value) || 0 })}
-                          placeholder="Steps"
-                          min={0}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500"
-                        />
-                      )}
-                    </div>
+                  {/* Steps for walk/commute */}
+                  {cfg.hasSteps && (
+                    <input
+                      type="number"
+                      value={block.steps || ""}
+                      onChange={e => updateBlock(block.id, { steps: parseInt(e.target.value) || 0 })}
+                      placeholder="Steps"
+                      min={0}
+                      max={50000}
+                      className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500"
+                    />
+                  )}
 
-                    {/* Delete */}
-                    <div className="sm:col-span-1 flex justify-end">
-                      <button
-                        onClick={() => removeBlock(block.id)}
-                        className="w-7 h-7 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    onClick={() => removeBlock(block.id)}
+                    className="w-7 h-7 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all flex-shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Add block button */}
-        <div className="px-5 py-4 border-t border-gray-800">
-          <button
-            onClick={addBlock}
-            className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 text-sm font-medium transition-colors group"
-          >
-            <div className="w-7 h-7 rounded-lg border-2 border-dashed border-emerald-500/50 group-hover:border-emerald-400 flex items-center justify-center transition-colors">
-              <Plus className="w-4 h-4" />
-            </div>
-            Add Activity
+        <div className="px-4 py-3 border-t border-gray-800">
+          <button onClick={addBlock} className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 text-sm transition-colors">
+            <Plus className="w-4 h-4" /> Add Activity
           </button>
         </div>
       </div>
 
-      {/* Validation warnings */}
-      {tooManyExercises && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-          <p className="text-red-400 text-sm">
-            You have {exerciseCount} exercise sessions. Maximum is 3 per day for recovery.
-            Remove one exercise session to continue.
-          </p>
-        </div>
-      )}
-
-      {/* Generate button */}
+      {/* Generate */}
       <button
-        onClick={generatePlan}
-        disabled={generating || tooManyExercises || !hasMeal}
-        className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-4 rounded-2xl hover:from-amber-600 hover:to-orange-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3 text-lg shadow-xl shadow-amber-500/20"
+        onClick={generate}
+        disabled={generating || !canGenerate || exerciseCount > 3}
+        className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-4 rounded-2xl hover:from-amber-600 hover:to-orange-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-base shadow-xl shadow-amber-500/20"
       >
         {generating ? (
-          <><RefreshCw className="w-5 h-5 animate-spin" /> AI is analyzing your schedule...</>
+          <><RefreshCw className="w-5 h-5 animate-spin" /> AI is building your plan...</>
         ) : (
-          <><Sparkles className="w-5 h-5" /> Generate My Custom Plan</>
+          <><Sparkles className="w-5 h-5" /> Generate My Personalized Plan</>
         )}
       </button>
 
-      {!hasMeal && (
-        <p className="text-center text-amber-400 text-xs">Add at least one meal to generate your plan</p>
-      )}
-
       {/* Generated Plan */}
-      {generatedPlan && <GeneratedPlanView plan={generatedPlan} expandedSection={expandedSection} setExpandedSection={setExpandedSection} />}
+      {generatedPlan && (
+        <GeneratedPlanDisplay
+          plan={generatedPlan}
+          expanded={expanded}
+          setExpanded={setExpanded}
+        />
+      )}
     </div>
   );
 }
 
-// ─── Generated Plan Display ───────────────────────
-function Section({
-  id, title, expanded, toggle, children
-}: {
-  id: string; title: string; expanded: boolean;
-  toggle: () => void; children: React.ReactNode;
+function GeneratedPlanDisplay({ plan, expanded, setExpanded }: {
+  plan: GeneratedPlan; expanded: string; setExpanded: (s: string) => void;
 }) {
-  return (
-    <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-      <button
-        onClick={toggle}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-800/50 transition-colors"
-      >
-        <h3 className="text-white font-bold">{title}</h3>
-        {expanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-      </button>
-      {expanded && <div className="px-5 pb-5">{children}</div>}
-    </div>
-  );
-}
-
-function GeneratedPlanView({
-  plan, expandedSection, setExpandedSection
-}: {
-  plan: GeneratedPlan;
-  expandedSection: string | null;
-  setExpandedSection: (s: string | null) => void;
-}) {
-  const toggle = (id: string) => setExpandedSection(expandedSection === id ? null : id);
+  const toggle = (s: string) => setExpanded(expanded === s ? "" : s);
 
   return (
     <div className="space-y-4">
-      {/* Summary banner */}
-      <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl p-5">
-        <h2 className="text-white font-bold text-lg mb-2 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-amber-400" /> Your Custom Plan
-        </h2>
-        <p className="text-gray-300 text-sm leading-relaxed mb-4">{plan.summary}</p>
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl p-6">
+        <div className="flex items-start gap-3 mb-4">
+          <Sparkles className="w-6 h-6 text-amber-400 flex-shrink-0 mt-1" />
+          <div>
+            <h2 className="text-white font-extrabold text-xl">{plan.headline}</h2>
+            <p className="text-gray-300 text-sm mt-1 leading-relaxed">{plan.summary}</p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: "Daily Calories", value: `${plan.totalCaloriesNeeded} kcal`, color: "text-orange-400" },
-            { label: "Daily Protein", value: `${plan.proteinNeeded}g`, color: "text-emerald-400" },
-            { label: "Exercise Sessions", value: plan.workoutAdvice.length, color: "text-red-400" },
-            { label: "Meal Timings", value: plan.mealTimings.length, color: "text-blue-400" },
-          ].map(({ label, value, color }) => (
+            { label: "Daily Calories", value: `${plan.totalCalories}`, unit: "kcal", icon: Flame, color: "text-orange-400" },
+            { label: "Protein Target", value: `${plan.proteinTarget}`, unit: "g/day", icon: Zap, color: "text-emerald-400" },
+            { label: "Meals Planned", value: `${plan.mealTimings.length}`, unit: "meals", icon: Utensils, color: "text-blue-400" },
+            { label: "Goal Timeline", value: plan.estimatedWeeksToGoal > 0 ? `${plan.estimatedWeeksToGoal}` : "∞", unit: plan.estimatedWeeksToGoal > 0 ? "weeks" : "ongoing", icon: Target, color: "text-purple-400" },
+          ].map(({ label, value, unit, icon: Icon, color }) => (
             <div key={label} className="bg-gray-900/80 rounded-xl p-3 text-center">
-              <p className={`font-bold text-base ${color}`}>{value}</p>
-              <p className="text-gray-500 text-xs">{label}</p>
+              <Icon className={`w-4 h-4 ${color} mx-auto mb-1`} />
+              <p className={`font-bold text-lg ${color}`}>{value}</p>
+              <p className="text-gray-500 text-xs">{unit}</p>
+              <p className="text-gray-600 text-xs">{label}</p>
             </div>
           ))}
         </div>
+
+        {/* Goal timeline */}
+        {plan.goalTimeline && (
+          <div className="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
+            <p className="text-emerald-400 text-sm font-semibold">🎯 {plan.goalTimeline}</p>
+          </div>
+        )}
+
+        {/* Motivation */}
+        {plan.motivationNote && (
+          <p className="mt-3 text-gray-400 text-xs italic">💬 "{plan.motivationNote}"</p>
+        )}
       </div>
 
       {/* Warnings */}
       {plan.warnings?.length > 0 && (
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 space-y-1">
-          <p className="text-amber-400 font-semibold text-sm mb-2">⚠️ AI Observations</p>
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4">
+          <p className="text-amber-400 font-semibold text-sm mb-2">⚠️ Important Notes</p>
           {plan.warnings.map((w, i) => (
-            <p key={i} className="text-amber-300/80 text-xs flex items-start gap-2">
-              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />{w}
+            <p key={i} className="text-amber-300/80 text-xs flex items-start gap-2 mb-1">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" /> {w}
             </p>
           ))}
         </div>
       )}
 
-      {/* Meal Timings */}
-      <Section id="meals" title="🍽️ Optimized Meal Timings" expanded={expandedSection === "meals"} toggle={() => toggle("meals")}>
+      {/* Timetable */}
+      {plan.hourlyTimetable?.length > 0 && (
+        <PlanSection title="📅 Your Daily Timetable" id="timetable" expanded={expanded} toggle={toggle}>
+          <div className="space-y-2">
+            {plan.hourlyTimetable.map((item, i) => (
+              <div key={i} className="flex gap-3 items-start">
+                <span className="text-emerald-400 font-bold text-xs w-16 flex-shrink-0 mt-0.5">{item.time}</span>
+                <div className="flex-1 bg-gray-800/50 rounded-xl px-3 py-2">
+                  <p className="text-white text-sm font-medium">{item.activity}</p>
+                  {item.note && <p className="text-gray-500 text-xs mt-0.5">{item.note}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </PlanSection>
+      )}
+
+      {/* Meals */}
+      <PlanSection title="🍽️ Meal Timings & Nutrition" id="meals" expanded={expanded} toggle={toggle}>
         <div className="space-y-3">
           {plan.mealTimings.map((meal, i) => (
             <div key={i} className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div>
                   <span className="text-xs text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">{meal.time}</span>
-                  <h4 className="text-white font-semibold mt-1.5">{meal.meal}</h4>
-                  <p className="text-gray-400 text-sm mt-0.5">{meal.description}</p>
+                  <h4 className="text-white font-semibold mt-1.5 text-sm">{meal.meal}</h4>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-white font-bold">{meal.calories} cal</p>
+                  <p className="text-white font-bold text-sm">{meal.calories} cal</p>
                   <p className="text-emerald-400 text-xs">{meal.protein}g protein</p>
                 </div>
               </div>
-              <p className="text-gray-500 text-xs italic border-t border-gray-700/50 pt-2 mt-2">
-                💡 {meal.reason}
-              </p>
+              <p className="text-gray-500 text-xs italic border-t border-gray-700/50 pt-2">💡 {meal.reason}</p>
             </div>
           ))}
         </div>
-      </Section>
+      </PlanSection>
 
-      {/* Workout Advice */}
-      {plan.workoutAdvice.length > 0 && (
-        <Section id="workouts" title="💪 Workout Optimization" expanded={expandedSection === "workouts"} toggle={() => toggle("workouts")}>
+      {/* Workouts */}
+      {plan.workoutAdvice?.length > 0 && (
+        <PlanSection title="💪 Workout Optimization" id="workouts" expanded={expanded} toggle={toggle}>
           <div className="space-y-3">
             {plan.workoutAdvice.map((w, i) => (
               <div key={i} className="bg-gray-800/50 rounded-xl p-4">
-                <p className="text-white font-semibold mb-1">{w.session}</p>
-                <p className="text-emerald-400 text-sm mb-2">Focus: {w.focus}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-white font-semibold text-sm">{w.session}</p>
+                  <span className="text-gray-500 text-xs">{w.duration}</span>
+                </div>
+                <p className="text-emerald-400 text-xs mb-1">Focus: {w.focus}</p>
                 <p className="text-gray-400 text-xs">💡 {w.tip}</p>
               </div>
             ))}
           </div>
-        </Section>
+        </PlanSection>
       )}
 
-      {/* Other sections */}
-      <Section id="other" title="💧 Hydration, Sleep & Goals" expanded={expandedSection === "other"} toggle={() => toggle("other")}>
-        <div className="space-y-4">
+      {/* Hydration + Sleep */}
+      <PlanSection title="💧 Hydration & Sleep" id="health" expanded={expanded} toggle={toggle}>
+        <div className="space-y-3">
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-            <p className="text-blue-400 font-semibold text-sm mb-1">💧 Hydration</p>
+            <p className="text-blue-400 font-semibold text-xs mb-1">💧 Hydration</p>
             <p className="text-gray-300 text-sm">{plan.hydration}</p>
           </div>
           <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
-            <p className="text-purple-400 font-semibold text-sm mb-1">😴 Sleep Advice</p>
-            <p className="text-gray-300 text-sm">{plan.sleepAdvice}</p>
+            <p className="text-purple-400 font-semibold text-xs mb-1">😴 Sleep Score</p>
+            <p className="text-gray-300 text-sm">{plan.sleepScore}</p>
           </div>
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
-            <p className="text-amber-400 font-semibold text-sm mb-1">🎯 Weekly Goal</p>
-            <p className="text-gray-300 text-sm">{plan.weeklyGoal}</p>
-          </div>
-          <div className="bg-gray-800/60 rounded-xl p-4">
-            <p className="text-gray-400 font-semibold text-sm mb-1">🏃 Exercise Summary</p>
-            <p className="text-gray-300 text-sm">{plan.exerciseSummary}</p>
+            <p className="text-amber-400 font-semibold text-xs mb-1">📆 Weekly Milestone</p>
+            <p className="text-gray-300 text-sm">{plan.weeklyMilestone}</p>
           </div>
         </div>
-      </Section>
+      </PlanSection>
 
-      {/* Save / Print */}
+      {/* Actions */}
       <div className="flex gap-3">
         <button
           onClick={() => {
-            const text = `FitAI Pro Custom Plan\n\n${plan.summary}\n\nCalories: ${plan.totalCaloriesNeeded}\nProtein: ${plan.proteinNeeded}g\n\nMeals:\n${plan.mealTimings.map(m => `${m.time}: ${m.meal} (${m.calories} cal)`).join("\n")}`;
-            navigator.clipboard.writeText(text);
-            toast.success("Plan copied to clipboard!");
+            const t = `FitAI Pro Custom Plan\n\n${plan.headline}\n\n${plan.summary}\n\nCalories: ${plan.totalCalories} | Protein: ${plan.proteinTarget}g\n\nMeals:\n${plan.mealTimings.map(m => `${m.time}: ${m.meal} — ${m.calories} cal`).join("\n")}`;
+            navigator.clipboard.writeText(t);
+            toast.success("Plan copied!");
           }}
           className="flex-1 bg-gray-800 border border-gray-700 text-gray-300 font-semibold py-3 rounded-xl hover:bg-gray-700 transition-colors text-sm"
         >
           📋 Copy Plan
         </button>
         
-          href={`https://wa.me/?text=${encodeURIComponent(`My Custom FitAI Plan 💪\n\nCalories: ${plan.totalCaloriesNeeded} kcal | Protein: ${plan.proteinNeeded}g\n\n${plan.summary}\n\nMeals:\n${plan.mealTimings.map(m => `${m.time}: ${m.meal} (${m.calories} cal)`).join("\n")}\n\nTry: https://fitaipro-five.vercel.app`)}`}
+          href={`https://wa.me/?text=${encodeURIComponent(`My FitAI Custom Plan 💪\n\n${plan.headline}\n\nCalories: ${plan.totalCalories} kcal/day | Protein: ${plan.proteinTarget}g\n\nGoal: ${plan.goalTimeline}\n\nhttps://fitaipro-five.vercel.app`)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white font-semibold py-3 rounded-xl hover:bg-green-700 transition-colors text-sm"
+          className="flex-1 flex items-center justify-center bg-green-600 text-white font-semibold py-3 rounded-xl hover:bg-green-700 transition-colors text-sm"
         <a>
-          📲 Share on WhatsApp
+          📲 Share
         </a>
       </div>
+    </div>
+  );
+}
+
+function PlanSection({ id, title, expanded, toggle, children }: {
+  id: string; title: string; expanded: string;
+  toggle: (s: string) => void; children: React.ReactNode;
+}) {
+  const isOpen = expanded === id;
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+      <button onClick={() => toggle(id)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-800/30 transition-colors">
+        <h3 className="text-white font-bold text-sm">{title}</h3>
+        {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+      </button>
+      {isOpen && <div className="px-5 pb-5">{children}</div>}
     </div>
   );
 }

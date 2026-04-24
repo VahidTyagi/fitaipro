@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useState } from "react";
@@ -29,6 +27,14 @@ const navItems = [
   { label: "Workouts", href: "/dashboard/workout", icon: Dumbbell },
   { label: "History", href: "/dashboard/history", icon: History },
   { label: "Nutrition", href: "/dashboard/nutrition", icon: Apple },
+
+//   // Add to navItems array after Nutrition:
+// {
+//   href: "/dashboard/custom-plan",
+//   label: "Custom Plan",
+//   icon: Sparkles,
+//   badge: "Pro",
+// },
 
 {
   href: "/dashboard/custom-plan",

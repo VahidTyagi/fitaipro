@@ -5,58 +5,54 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const {
-      goal,
-      fitnessLevel,
-      workoutType,
-      dietType,
-      gender, // ✅ added
-      age,
-      currentWeight,
-      targetWeight,
-      height,
-    } = body;
 
-    const user = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { clerkId: userId },
       update: {
-        goal,
-        fitnessLevel,
-        workoutType,
-        dietType,
-        gender, // ✅ added
-        age: age ? parseInt(age) : null,
-        currentWeight: currentWeight ? parseFloat(currentWeight) : null,
-        targetWeight: targetWeight ? parseFloat(targetWeight) : null,
-        height: height ? parseFloat(height) : null,
+        gender: body.gender || null,
+        goal: body.goal || null,
+        fitnessLevel: body.fitnessLevel || null,
+        workoutType: body.workoutType || null,
+        dietType: body.dietType || null,
+        age: body.age ? parseInt(body.age) : null,
+        currentWeight: body.currentWeight ? parseFloat(body.currentWeight) : null,
+        targetWeight: body.targetWeight ? parseFloat(body.targetWeight) : null,
+        height: body.height ? parseFloat(body.height) : null,
+        // New fields
+        preferredWorkoutTime: body.preferredWorkoutTime || null,
+        workoutDaysPerWeek: body.workoutDaysPerWeek ? parseInt(body.workoutDaysPerWeek) : 3,
+        dailySteps: body.dailySteps ? parseInt(body.dailySteps) : 5000,
+        wakeTime: body.wakeTime || null,
+        sleepTime: body.sleepTime || null,
         onboardingDone: true,
       },
       create: {
         clerkId: userId,
         email: "",
-        goal,
-        fitnessLevel,
-        workoutType,
-        dietType,
-        gender, // ✅ added
-        age: age ? parseInt(age) : null,
-        currentWeight: currentWeight ? parseFloat(currentWeight) : null,
-        targetWeight: targetWeight ? parseFloat(targetWeight) : null,
-        height: height ? parseFloat(height) : null,
+        gender: body.gender || null,
+        goal: body.goal || null,
+        fitnessLevel: body.fitnessLevel || null,
+        workoutType: body.workoutType || null,
+        dietType: body.dietType || null,
+        age: body.age ? parseInt(body.age) : null,
+        currentWeight: body.currentWeight ? parseFloat(body.currentWeight) : null,
+        targetWeight: body.targetWeight ? parseFloat(body.targetWeight) : null,
+        height: body.height ? parseFloat(body.height) : null,
+        preferredWorkoutTime: body.preferredWorkoutTime || null,
+        workoutDaysPerWeek: body.workoutDaysPerWeek ? parseInt(body.workoutDaysPerWeek) : 3,
+        dailySteps: body.dailySteps ? parseInt(body.dailySteps) : 5000,
+        wakeTime: body.wakeTime || null,
+        sleepTime: body.sleepTime || null,
         onboardingDone: true,
         trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
 
-    return NextResponse.json({ success: true, user });
-  } catch (error) {
-    console.error("Onboarding error:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

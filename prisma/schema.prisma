@@ -55,6 +55,12 @@ model User {
   nutritionPlanData        Json?
   nutritionPlanGeneratedAt DateTime?
   nutritionPlanDays        Int?
+
+  preferredWorkoutTime String?  // morning | afternoon | evening | night | flexible | multiple
+  workoutDaysPerWeek   Int?     @default(3)
+  dailySteps           Int?     @default(5000)
+  wakeTime             String?  // "06:00"
+  sleepTime            String?  // "23:00"
 }
 
 model Workout {
