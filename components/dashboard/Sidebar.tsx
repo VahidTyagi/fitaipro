@@ -21,6 +21,13 @@ import { useClerk } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import type { DbUser } from "@/types";
 
+// Add admin check and link:
+{isAdmin && (
+  <Link href="/dashboard/admin">
+    <Shield className="w-5 h-5" /> Admin
+  </Link>
+)}
+
 // ✅ Keep navItems OUTSIDE component
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },

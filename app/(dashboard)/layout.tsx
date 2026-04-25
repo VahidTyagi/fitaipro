@@ -5,7 +5,38 @@ import { getSubscriptionStatus } from "@/lib/subscription";
 import Sidebar from "@/components/dashboard/Sidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+function buildCleanName(
+  fullName?: string | null,
+  firstName?: string | null,
+  lastName?: string | null,
+  email?: string
+): string {
+  // Try fullName first
+  if (fullName && !fullName.includes("@") && !fullName.includes("+")) {
+    return fullName.trim();
+  }
+  // Try first + last
+  const parts = [firstName, lastName].filter(
+    (p) => p && p.trim() && !p.includes("+") && !p.includes("@")
+  );
+  if (parts.length > 0) return parts.join(" ").trim();
+  // Fall back to email-based name
+  if (email) {
+    const local = email.split("@")[0].split("+")[0];
+    return local
+      .replace(/[._-]/g, " ")
+      .split(" ")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+  }
+  return "User";
+}
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
@@ -14,14 +45,40 @@ export default async function DashboardLayout({ children }: { children: React.Re
   let dbUser = await prisma.user.findUnique({ where: { clerkId: userId } });
 
   if (!dbUser) {
+    const email =
+      clerkUser?.emailAddresses[0]?.emailAddress || "";
+    const name = buildCleanName(
+      clerkUser?.fullName,
+      clerkUser?.firstName,
+      clerkUser?.lastName,
+      email
+    );
     dbUser = await prisma.user.create({
       data: {
         clerkId: userId,
-        email: clerkUser?.emailAddresses[0]?.emailAddress || "",
-        name: clerkUser?.fullName || null,
+        email,
+        name,
         imageUrl: clerkUser?.imageUrl || null,
         trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
+    });
+  } else if (
+    !dbUser.name ||
+    dbUser.name.includes("+") ||
+    dbUser.name.includes("@")
+  ) {
+    // Fix broken name in DB
+    const email =
+      clerkUser?.emailAddresses[0]?.emailAddress || dbUser.email;
+    const name = buildCleanName(
+      clerkUser?.fullName,
+      clerkUser?.firstName,
+      clerkUser?.lastName,
+      email
+    );
+    dbUser = await prisma.user.update({
+      where: { id: dbUser.id },
+      data: { name },
     });
   }
 

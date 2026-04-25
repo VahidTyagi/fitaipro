@@ -1,0 +1,81 @@
+name: CI — FitAI Pro Pre-Deploy Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  playwright-tests:
+    name: 🧪 Automation Tests (Must Pass for Deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🌐 Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: 🧪 Run public tests (T01-T12)
+        id: public_tests
+        run: |
+          npx playwright test tests/e2e \
+            --grep "T0[1-9]|T1[0-2]" \
+            --reporter=list
+        env:
+          PLAYWRIGHT_TEST_BASE_URL: https://fitaipro-five.vercel.app
+
+      - name: ❌ DEPLOY BLOCKED — Tests Failed
+        if: failure()
+        run: |
+          echo ""
+          echo "════════════════════════════════════════════════════════════"
+          echo "  🚫 DEPLOYMENT BLOCKED — AUTOMATION TESTS FAILED"
+          echo "════════════════════════════════════════════════════════════"
+          echo ""
+          echo "  One or more pre-deploy test cases have FAILED."
+          echo "  Code cannot go to production until all tests pass."
+          echo ""
+          echo "  📋 Action Required:"
+          echo "  ┌──────────────────────────────────────────────────────"
+          echo "  │  1. Check the test report above for failed tests"
+          echo "  │  2. Fix the failing code"
+          echo "  │  3. Run locally: npx playwright test tests/e2e"
+          echo "  │  4. All tests must pass before pushing again"
+          echo "  └──────────────────────────────────────────────────────"
+          echo ""
+          echo "  📞 Contact: fitaipro.official@gmail.com"
+          echo "  🔗 Report: Download 'playwright-report' artifact above"
+          echo ""
+          echo "════════════════════════════════════════════════════════════"
+          exit 1
+
+      - name: 📊 Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()          # upload even on failure
+        with:
+          name: playwright-report-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 30
+
+      - name: ✅ All tests passed — Deploy allowed
+        if: success()
+        run: |
+          echo ""
+          echo "════════════════════════════════════════════════════════════"
+          echo "  ✅ ALL AUTOMATION TESTS PASSED"
+          echo "  🚀 Deployment to production is APPROVED"
+          echo "  📅 $(date)"
+          echo "════════════════════════════════════════════════════════════"

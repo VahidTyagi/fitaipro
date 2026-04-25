@@ -6,6 +6,11 @@ import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
+export const metadata2: Metadata = {
+  // ...existing...
+  manifest: "/manifest.json",
+};
+
 export const viewport: Viewport = {
   themeColor: "#10b981",
   width: "device-width",

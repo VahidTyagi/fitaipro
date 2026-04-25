@@ -1,7 +1,7 @@
 {
   "name": "FitAI Pro",
   "short_name": "FitAI Pro",
-  "description": "Your AI-Powered Fitness Coach — Free workouts forever",
+  "description": "AI-powered fitness coaching for everyone",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#030712",
@@ -21,6 +21,5 @@
       "purpose": "maskable any"
     }
   ],
-  "categories": ["health", "fitness", "lifestyle"],
-  "lang": "en-IN"
+  "categories": ["health", "fitness", "lifestyle"]
 }

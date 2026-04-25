@@ -1,135 +1,177 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { UserButton } from "@clerk/nextjs";
+"use client";
+import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
+import { User, Mail, Save, CheckCircle, AlertCircle, Lock, CreditCard, FileText } from "lucide-react";
+import toast from "react-hot-toast";
 import Link from "next/link";
-import { Crown, Clock, CreditCard, ChevronRight } from "lucide-react";
 
-export default async function SettingsPage() {
-  const { userId } = await auth();
-  if (!userId) redirect("/sign-in");
+export default function SettingsPage() {
+  const { user: clerkUser } = useUser();
+  const [profile, setProfile] = useState({ name: "", email: "" });
+  const [newName, setNewName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [payments, setPayments] = useState<any[]>([]);
 
-  const dbUser = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    include: {
-      payments: {
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        where: { status: "paid" },
-      },
-    },
-  });
+  useEffect(() => {
+    fetch("/api/user/profile")
+      .then(r => r.json())
+      .then(d => {
+        const displayName = getCleanName(d.name, d.email);
+        setProfile({ name: displayName, email: d.email || "" });
+        setNewName(displayName);
+      });
 
-  if (!dbUser) redirect("/onboarding");
+    fetch("/api/user/plan")
+      .then(r => r.json())
+      .then(d => setSubscription(d));
 
-  const trialEnd = dbUser.trialEnd ? new Date(dbUser.trialEnd) : null;
-  const daysLeft = trialEnd
-    ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : 0;
-  const trialActive = daysLeft > 0;
-  const isPro = dbUser.plan === "pro" || dbUser.plan === "elite";
+    fetch("/api/payment/history")
+      .then(r => r.json())
+      .then(d => setPayments(d.payments || []))
+      .catch(() => {});
+  }, []);
+
+  function getCleanName(name?: string | null, email?: string): string {
+    if (name && !name.includes("@") && !name.includes("+")) return name;
+    const local = (email || "").split("@")[0].split("+")[0];
+    return local.replace(/[._-]/g, " ").split(" ")
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  }
+
+  const saveName = async () => {
+    if (!newName.trim()) { toast.error("Name cannot be empty"); return; }
+    if (newName.trim() === profile.name) { toast("No changes made"); return; }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/user/update-profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim() }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setProfile(p => ({ ...p, name: newName.trim() }));
+      toast.success("Name updated! ✅");
+    } catch {
+      toast.error("Failed to update name");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white mb-1">Settings</h1>
-        <p className="text-gray-400">Manage your account and subscription</p>
+        <h1 className="text-2xl font-bold text-white">Settings</h1>
+        <p className="text-gray-400 text-sm mt-1">Manage your profile and subscription</p>
       </div>
 
-      {/* Profile Card */}
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-        <h2 className="text-white font-bold mb-4">Profile</h2>
-        <div className="flex items-center gap-4">
-          <UserButton />
-          <div>
-            <p className="text-white font-medium">{dbUser.name || "User"}</p>
-            <p className="text-gray-400 text-sm">{dbUser.email}</p>
+      {/* Profile */}
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
+        <h2 className="text-white font-bold flex items-center gap-2">
+          <User className="w-5 h-5 text-emerald-400" /> Profile
+        </h2>
+
+        {/* Name */}
+        <div>
+          <label className="text-gray-300 text-sm font-medium mb-2 block">Display Name</label>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              placeholder="Your name"
+              className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500 text-sm"
+            />
+            <button
+              onClick={saveName}
+              disabled={saving || newName.trim() === profile.name}
+              className="px-5 py-3 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition-colors disabled:opacity-40 flex items-center gap-2 text-sm"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? "Saving..." : "Save"}
+            </button>
           </div>
+        </div>
+
+        {/* Email — show only, change via Clerk */}
+        <div>
+          <label className="text-gray-300 text-sm font-medium mb-2 block">Email Address</label>
+          <div className="flex items-center gap-3 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3">
+            <Mail className="w-4 h-4 text-gray-500 flex-shrink-0" />
+            <span className="text-gray-300 text-sm flex-1">{profile.email || "—"}</span>
+            <span className="text-gray-600 text-xs">Managed by Clerk</span>
+          </div>
+          <p className="text-gray-600 text-xs mt-1.5">
+            To change email, go to{" "}
+            <button
+              onClick={() => clerkUser?.update({ unsafeMetadata: {} })}
+              className="text-emerald-400 hover:underline"
+            >
+              account settings
+            </button>
+          </p>
         </div>
       </div>
 
-      {/* Subscription Card */}
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-        <h2 className="text-white font-bold mb-5 flex items-center gap-2">
-          <Crown className="w-5 h-5 text-amber-400" />
-          Subscription
+      {/* Subscription */}
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-4">
+        <h2 className="text-white font-bold flex items-center gap-2">
+          <CreditCard className="w-5 h-5 text-emerald-400" /> Subscription
         </h2>
 
-        {isPro ? (
-          <div className="space-y-4">
+        {subscription && (
+          <div className={`rounded-xl p-4 border ${
+            subscription.isPaid
+              ? "bg-emerald-500/10 border-emerald-500/20"
+              : "bg-gray-800 border-gray-700"
+          }`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white font-semibold capitalize">{dbUser.plan} Plan</p>
-                <p className="text-gray-400 text-sm">
-                  {dbUser.subscriptionEnd
-                    ? `Renews on ${new Date(dbUser.subscriptionEnd).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}`
-                    : "Active subscription"}
+                <p className="text-white font-semibold capitalize">
+                  {subscription.isPaid ? `${subscription.plan} Plan` : "Free Trial"}
+                </p>
+                <p className="text-gray-400 text-sm mt-0.5">
+                  {subscription.isPaid
+                    ? `${subscription.daysLeft} days remaining${subscription.subscriptionEnd ? ` · Renews ${new Date(subscription.subscriptionEnd).toLocaleDateString("en-IN")}` : ""}`
+                    : `${subscription.daysLeft} days left in free trial`}
                 </p>
               </div>
-              <span className="bg-emerald-500/20 text-emerald-400 text-sm font-bold px-4 py-2 rounded-full capitalize">
-                {dbUser.plan}
-              </span>
-            </div>
-            <div className="bg-gray-800/50 rounded-xl p-4">
-              <p className="text-gray-400 text-sm">
-                To cancel your subscription, email us at{" "}
-                <a href="mailto:vahidtyagi007@gmail.com" className="text-emerald-400 hover:underline">
-                vahidtyagi007@gmail.com
-                </a>
-              </p>
+              {subscription.isPaid
+                ? <span className="bg-emerald-500/20 text-emerald-400 text-xs font-bold px-3 py-1.5 rounded-full">Active</span>
+                : <Link href="/pricing" className="bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-emerald-600 transition-colors">Upgrade</Link>
+              }
             </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white font-semibold">Free Plan</p>
-                <p className="text-gray-400 text-sm">
-                  {trialActive
-                    ? `Diet trial: ${daysLeft} day${daysLeft !== 1 ? "s" : ""} remaining`
-                    : "Diet trial ended — workouts still free"}
-                </p>
-              </div>
-              <span className="bg-gray-800 text-gray-400 text-sm font-bold px-4 py-2 rounded-full">
-                Free
-              </span>
-            </div>
-            <Link
-              href="/pricing"
-              className="flex items-center justify-between bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl p-4 hover:from-emerald-500/20 hover:to-teal-500/20 transition-all"
-            >
-              <div>
-                <p className="text-emerald-400 font-semibold text-sm">Upgrade to Pro — ₹499/month</p>
-                <p className="text-gray-400 text-xs mt-0.5">Unlimited diet plans + advanced features</p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-emerald-400" />
-            </Link>
-          </div>
+        )}
+
+        {subscription?.isPaid && (
+          <p className="text-gray-500 text-xs">
+            To cancel subscription, email:{" "}
+            <a href="mailto:fitaipro.official@gmail.com" className="text-emerald-400 hover:underline">
+              fitaipro.official@gmail.com
+            </a>
+          </p>
         )}
       </div>
 
       {/* Payment History */}
-      {dbUser.payments && dbUser.payments.length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-          <h2 className="text-white font-bold mb-4 flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-blue-400" />
-            Payment History
+      {payments.length > 0 && (
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-4">
+          <h2 className="text-white font-bold flex items-center gap-2">
+            <FileText className="w-5 h-5 text-emerald-400" /> Payment History
           </h2>
-          <div className="space-y-3">
-            {dbUser.payments.map((payment) => (
-              <div key={payment.id} className="flex items-center justify-between bg-gray-800/50 rounded-xl p-4">
+          <div className="space-y-2">
+            {payments.map((p, i) => (
+              <div key={i} className="flex items-center justify-between bg-gray-800/50 rounded-xl px-4 py-3">
                 <div>
-                  <p className="text-white font-medium capitalize">{payment.plan} Plan</p>
-                  <p className="text-gray-500 text-xs">
-                    {new Date(payment.createdAt).toLocaleDateString("en-IN", {
-                      day: "numeric", month: "long", year: "numeric",
-                    })}
-                  </p>
+                  <p className="text-white text-sm font-medium capitalize">{p.plan} Plan</p>
+                  <p className="text-gray-500 text-xs">{new Date(p.createdAt).toLocaleDateString("en-IN")}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-white font-bold">₹{(payment.amount / 100).toLocaleString()}</p>
-                  <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">
-                    Paid
+                  <p className="text-white font-bold text-sm">₹{(p.amount / 100).toFixed(0)}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${p.status === "paid" ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-700 text-gray-400"}`}>
+                    {p.status}
                   </span>
                 </div>
               </div>
@@ -138,38 +180,17 @@ export default async function SettingsPage() {
         </div>
       )}
 
-      {/* Fitness Profile */}
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-        <h2 className="text-white font-bold mb-4">Fitness Profile</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: "Goal", value: dbUser.goal?.replace(/_/g, " ") || "—" },
-            { label: "Level", value: dbUser.fitnessLevel || "—" },
-            { label: "Workout Type", value: dbUser.workoutType?.replace(/_/g, " ") || "—" },
-            { label: "Diet", value: dbUser.dietType?.replace(/_/g, " ") || "—" },
-            { label: "Height", value: dbUser.height ? `${dbUser.height} cm` : "—" },
-            { label: "Weight", value: dbUser.currentWeight ? `${dbUser.currentWeight} kg` : "—" },
-          ].map((item) => (
-            <div key={item.label} className="bg-gray-800/50 rounded-xl p-3">
-              <p className="text-gray-500 text-xs capitalize">{item.label}</p>
-              <p className="text-white font-medium text-sm capitalize mt-0.5">{item.value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Danger Zone */}
-      <div className="bg-gray-900 border border-red-900/30 rounded-2xl p-6">
-        <h2 className="text-red-400 font-bold mb-2">Support</h2>
-        <p className="text-gray-400 text-sm mb-4">
-          Need help? Having issues? Contact us and we&apos;ll respond within 24 hours.
+      {/* Support */}
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-400" /> Support
+        </h2>
+        <p className="text-gray-400 text-sm">
+          Need help? Email us at{" "}
+          <a href="mailto:fitaipro.official@gmail.com" className="text-emerald-400 hover:underline">
+            fitaipro.official@gmail.com
+          </a>
         </p>
-        <a
-          href="mailto:fitaipro.official@gmail.com"
-          className="text-emerald-400 text-sm hover:text-emerald-300 transition-colors"
-        >
-          fitaipro.official@gmail.com →
-        </a>
       </div>
     </div>
   );

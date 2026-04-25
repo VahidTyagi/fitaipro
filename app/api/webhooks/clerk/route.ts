@@ -4,9 +4,30 @@ import { WebhookEvent } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+function buildName(
+  firstName?: string | null,
+  lastName?: string | null,
+  email?: string
+): string {
+  const parts = [firstName, lastName].filter(
+    (p) => p && p.trim() && !p.includes("+") && !p.includes("@")
+  );
+  if (parts.length > 0) return parts.join(" ").trim();
+  if (email) {
+    const local = email.split("@")[0].split("+")[0];
+    return local
+      .replace(/[._-]/g, " ")
+      .split(" ")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+  }
+  return "User";
+}
+
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
-  if (!WEBHOOK_SECRET) return NextResponse.json({ error: "No secret" }, { status: 400 });
+  if (!WEBHOOK_SECRET)
+    return NextResponse.json({ error: "No webhook secret configured" }, { status: 400 });
 
   const headerPayload = await headers();
   const svix_id = headerPayload.get("svix-id");
@@ -14,10 +35,16 @@ export async function POST(req: Request) {
   const svix_signature = headerPayload.get("svix-signature");
 
   if (!svix_id || !svix_timestamp || !svix_signature) {
-    return NextResponse.json({ error: "Missing headers" }, { status: 400 });
+    return NextResponse.json({ error: "Missing svix headers" }, { status: 400 });
   }
 
-  const payload = await req.json();
+  let payload: unknown;
+  try {
+    payload = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
   const body = JSON.stringify(payload);
   const wh = new Webhook(WEBHOOK_SECRET);
   let evt: WebhookEvent;
@@ -28,44 +55,64 @@ export async function POST(req: Request) {
       "svix-timestamp": svix_timestamp,
       "svix-signature": svix_signature,
     }) as WebhookEvent;
-  } catch {
-    return NextResponse.json({ error: "Invalid webhook" }, { status: 400 });
+  } catch (err) {
+    console.error("Webhook signature verification failed:", err);
+    return NextResponse.json({ error: "Invalid webhook signature" }, { status: 400 });
   }
 
+  // ── user.created ──────────────────────────────────────────────────────────
   if (evt.type === "user.created") {
     const { id, email_addresses, first_name, last_name, image_url } = evt.data;
-    const email = email_addresses[0]?.email_address || "";
-    // Build full name properly
-    const nameParts = [first_name, last_name].filter(Boolean);
-    const name = nameParts.length > 0 ? nameParts.join(" ") : email.split("@")[0];
+    const email = email_addresses?.[0]?.email_address || "";
+    const name = buildName(first_name, last_name, email);
 
-    await prisma.user.upsert({
-      where: { clerkId: id },
-      update: { name, imageUrl: image_url || null },
-      create: {
-        clerkId: id,
-        email,
-        name,
-        imageUrl: image_url || null,
-        trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
-    });
+    try {
+      await prisma.user.upsert({
+        where: { clerkId: id },
+        update: {
+          name,
+          imageUrl: image_url || null,
+        },
+        create: {
+          clerkId: id,
+          email,
+          name,
+          imageUrl: image_url || null,
+          trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+    } catch (err) {
+      console.error("Error creating user from webhook:", err);
+      return NextResponse.json({ error: "DB error" }, { status: 500 });
+    }
   }
 
+  // ── user.updated ──────────────────────────────────────────────────────────
   if (evt.type === "user.updated") {
-    const { id, first_name, last_name, image_url } = evt.data;
-    const nameParts = [first_name, last_name].filter(Boolean);
-    const name = nameParts.length > 0 ? nameParts.join(" ") : null;
+    const { id, email_addresses, first_name, last_name, image_url } = evt.data;
+    const email = email_addresses?.[0]?.email_address;
+    const name = buildName(first_name, last_name, email);
 
-    await prisma.user.updateMany({
-      where: { clerkId: id },
-      data: { name, imageUrl: image_url || null },
-    });
+    try {
+      await prisma.user.updateMany({
+        where: { clerkId: id },
+        data: {
+          name,
+          imageUrl: image_url || null,
+          ...(email && { email }),
+        },
+      });
+    } catch (err) {
+      console.error("Error updating user from webhook:", err);
+    }
   }
 
-  if (evt.type === "user.deleted") {
-    if (evt.data.id) {
+  // ── user.deleted ──────────────────────────────────────────────────────────
+  if (evt.type === "user.deleted" && evt.data.id) {
+    try {
       await prisma.user.deleteMany({ where: { clerkId: evt.data.id } });
+    } catch (err) {
+      console.error("Error deleting user from webhook:", err);
     }
   }
 

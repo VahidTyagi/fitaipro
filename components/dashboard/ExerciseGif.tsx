@@ -1,115 +1,242 @@
-
 "use client";
 import { useState, useEffect } from "react";
 
 interface Props {
   gifUrl?: string | null;
+  exerciseId?: string;
   name: string;
   muscle: string;
   size?: "sm" | "md" | "lg";
-  exerciseId?: string;
 }
 
-// Each exercise has a unique animation style
-const EXERCISE_DISPLAY: Record<string, {
-  emoji: string;
-  bg: string;
-  accent: string;
-  animation: string;
-  description: string;
-}> = {
-  pushup:           { emoji:"💪", bg:"from-red-600 to-rose-800",      accent:"#f43f5e", animation:"bounce-pushup",    description:"Push down & push up" },
-  squat_bw:         { emoji:"🦵", bg:"from-green-600 to-emerald-800", accent:"#10b981", animation:"bounce-squat",     description:"Sit down & stand up" },
-  plank:            { emoji:"⚡", bg:"from-indigo-600 to-blue-800",   accent:"#6366f1", animation:"pulse-plank",      description:"Hold straight position" },
-  lunge_bw:         { emoji:"🏃", bg:"from-teal-600 to-cyan-800",     accent:"#14b8a6", animation:"bounce-lunge",     description:"Step forward, lower knee" },
-  mountain_climber: { emoji:"🔥", bg:"from-orange-600 to-red-800",    accent:"#f97316", animation:"run-climber",      description:"Drive knees fast" },
-  burpee:           { emoji:"💥", bg:"from-purple-600 to-violet-800", accent:"#a855f7", animation:"bounce-burpee",    description:"Drop, push up, jump!" },
-  glute_bridge:     { emoji:"🍑", bg:"from-pink-600 to-rose-800",     accent:"#ec4899", animation:"bounce-bridge",    description:"Hips up, squeeze, lower" },
-  jumping_jack:     { emoji:"⭐", bg:"from-yellow-600 to-orange-800", accent:"#eab308", animation:"spin-jack",        description:"Jump & spread arms/legs" },
-  crunches:         { emoji:"⚡", bg:"from-blue-600 to-indigo-800",   accent:"#3b82f6", animation:"bounce-crunch",    description:"Curl up, squeeze abs" },
-  high_knees:       { emoji:"🏃", bg:"from-amber-600 to-yellow-800",  accent:"#f59e0b", animation:"run-knees",        description:"Run in place, knees high" },
-  tricep_dip:       { emoji:"💪", bg:"from-slate-600 to-gray-800",    accent:"#64748b", animation:"bounce-dip",       description:"Dip down, push back up" },
-  superman:         { emoji:"🦸", bg:"from-sky-600 to-blue-800",      accent:"#0ea5e9", animation:"fly-superman",     description:"Lift arms, chest & legs" },
-  wall_sit:         { emoji:"🧱", bg:"from-zinc-600 to-neutral-800",  accent:"#71717a", animation:"pulse-wallsit",    description:"Hold 90° squat position" },
-  leg_raise:        { emoji:"🦵", bg:"from-emerald-600 to-teal-800",  accent:"#059669", animation:"bounce-legraise",  description:"Raise legs up slowly" },
-  pike_pushup:      { emoji:"🔺", bg:"from-violet-600 to-purple-800", accent:"#7c3aed", animation:"bounce-pike",      description:"Head to floor & back up" },
-  db_bench_press:   { emoji:"🏋️", bg:"from-red-700 to-rose-900",      accent:"#dc2626", animation:"press-bench",      description:"Press up & lower slowly" },
-  db_row:           { emoji:"🚣", bg:"from-blue-700 to-indigo-900",   accent:"#1d4ed8", animation:"pull-row",         description:"Pull to hip, control down" },
-  db_shoulder_press:{ emoji:"☝️", bg:"from-purple-700 to-violet-900", accent:"#7e22ce", animation:"press-shoulder",   description:"Press overhead & lower" },
-  goblet_squat:     { emoji:"🏆", bg:"from-amber-700 to-yellow-900",  accent:"#b45309", animation:"bounce-squat",     description:"Squat deep, chest up" },
-  db_curl:          { emoji:"💪", bg:"from-orange-700 to-amber-900",  accent:"#c2410c", animation:"curl-bicep",       description:"Curl up, squeeze, lower" },
-  db_rdl:           { emoji:"⚓", bg:"from-green-700 to-emerald-900", accent:"#15803d", animation:"hinge-rdl",        description:"Hinge forward, feel stretch" },
-  db_lateral_raise: { emoji:"🦅", bg:"from-cyan-700 to-sky-900",      accent:"#0e7490", animation:"raise-lateral",    description:"Raise arms to sides" },
-  db_chest_fly:     { emoji:"🦅", bg:"from-rose-700 to-pink-900",     accent:"#be123c", animation:"fly-chest",        description:"Open arms wide & bring together" },
-  db_lunge:         { emoji:"🦵", bg:"from-teal-700 to-green-900",    accent:"#0f766e", animation:"bounce-lunge",     description:"Lunge with dumbbells" },
-  barbell_bench:    { emoji:"🏋️", bg:"from-red-800 to-rose-950",      accent:"#991b1b", animation:"press-bench",      description:"Press bar up & lower to chest" },
-  deadlift:         { emoji:"💀", bg:"from-gray-700 to-slate-900",    accent:"#374151", animation:"lift-dead",        description:"Lift from floor, lock out" },
-  squat_barbell:    { emoji:"🏋️", bg:"from-green-800 to-emerald-950", accent:"#166534", animation:"bounce-squat",     description:"Bar on back, squat deep" },
-  overhead_press:   { emoji:"🙌", bg:"from-purple-800 to-violet-950", accent:"#581c87", animation:"press-shoulder",   description:"Press bar overhead, lockout" },
-  lat_pulldown:     { emoji:"🔙", bg:"from-blue-800 to-indigo-950",   accent:"#1e3a8a", animation:"pull-row",         description:"Pull bar to upper chest" },
-  cable_fly:        { emoji:"🦅", bg:"from-rose-800 to-pink-950",     accent:"#9f1239", animation:"fly-chest",        description:"Bring cables together" },
-  leg_press:        { emoji:"🦵", bg:"from-teal-800 to-cyan-950",     accent:"#134e4a", animation:"bounce-squat",     description:"Press platform, control down" },
-  tricep_pushdown:  { emoji:"👇", bg:"from-yellow-700 to-orange-900", accent:"#a16207", animation:"press-down",       description:"Push cable down to lockout" },
-  face_pull:        { emoji:"😤", bg:"from-cyan-800 to-sky-950",      accent:"#155e75", animation:"pull-face",        description:"Pull rope to face, elbows high" },
-  cable_row:        { emoji:"🚣", bg:"from-sky-800 to-blue-950",      accent:"#1e40af", animation:"pull-row",         description:"Row handle to chest" },
-  incline_db_press: { emoji:"📐", bg:"from-orange-800 to-red-950",    accent:"#9a3412", animation:"press-bench",      description:"Press at incline angle" },
-  leg_curl:         { emoji:"🦵", bg:"from-emerald-800 to-teal-950",  accent:"#064e3b", animation:"curl-leg",         description:"Curl leg up to glutes" },
+// ── GitHub CDN mapping ───────────────────────────────────────────────────────
+// Raw GitHub images — no auth, no hotlink block, works in browsers
+const GITHUB_BASE =
+  "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
+
+const EXERCISE_FRAMES: Record<string, string> = {
+  // Home — no equipment
+  pushup:            "Push-Up",
+  squat_bw:          "Bodyweight-Squat",
+  plank:             "Plank",
+  lunge_bw:          "Lunge",
+  mountain_climber:  "Mountain-Climber",
+  burpee:            "Burpee",
+  glute_bridge:      "Glute-Bridge",
+  jumping_jack:      "Jumping-Jacks",
+  crunches:          "Crunch",
+  high_knees:        "High-Knee-Run-in-Place",
+  tricep_dip:        "Triceps-Dip",
+  superman:          "Superman",
+  leg_raise:         "Leg-Raise",
+  pike_pushup:       "Pike-Push-Up",
+  wall_sit:          "Wall-Sit",
+  // Home — with equipment
+  db_bench_press:    "Dumbbell-Bench-Press",
+  db_row:            "Bent-Over-Dumbbell-Row",
+  db_shoulder_press: "Dumbbell-Shoulder-Press",
+  goblet_squat:      "Goblet-Squat",
+  db_curl:           "Dumbbell-Bicep-Curl",
+  db_rdl:            "Romanian-Deadlift",
+  db_lateral_raise:  "Lateral-Raise",
+  db_chest_fly:      "Dumbbell-Flyes",
+  db_lunge:          "Dumbbell-Lunge",
+  db_tricep_ext:     "Triceps-Extension",
+  // Gym
+  barbell_bench:     "Barbell-Bench-Press",
+  deadlift:          "Barbell-Deadlift",
+  squat_barbell:     "Barbell-Back-Squat",
+  overhead_press:    "Barbell-Overhead-Press",
+  lat_pulldown:      "Lat-Pulldown",
+  cable_fly:         "Cable-Crossover",
+  leg_press:         "Leg-Press",
+  tricep_pushdown:   "Triceps-Pushdown",
+  face_pull:         "Face-Pull",
+  cable_row:         "Seated-Cable-Row",
+  incline_db_press:  "Incline-Dumbbell-Press",
+  leg_curl:          "Lying-Leg-Curl",
 };
 
-const SIZE_MAP = { sm: { h: "h-36", emoji: "text-4xl", font: "text-sm" }, md: { h: "h-52", emoji: "text-5xl", font: "text-base" }, lg: { h: "h-64", emoji: "text-6xl", font: "text-lg" } };
+function getFrameUrls(exerciseId: string): [string, string] {
+  const folder = EXERCISE_FRAMES[exerciseId];
+  if (!folder) return ["", ""];
+  return [
+    `${GITHUB_BASE}/${folder}/images/0.jpg`,
+    `${GITHUB_BASE}/${folder}/images/1.jpg`,
+  ];
+}
 
-export default function ExerciseGif({ gifUrl, name, muscle, size = "md", exerciseId }: Props) {
-  const [step, setStep] = useState(0);
-  const data = exerciseId ? EXERCISE_DISPLAY[exerciseId] : null;
-  const fallbackGradient = "from-emerald-600 to-teal-800";
-  const { h, emoji: emojiSize, font } = SIZE_MAP[size];
+// ── Muscle styles ────────────────────────────────────────────────────────────
+const MUSCLE_STYLE: Record
+  string,
+  { gradient: string; emoji: string }
+> = {
+  chest:      { gradient: "from-red-500 to-rose-700",      emoji: "💪" },
+  back:       { gradient: "from-blue-500 to-indigo-700",   emoji: "🔙" },
+  shoulders:  { gradient: "from-purple-500 to-violet-700", emoji: "🏋️" },
+  biceps:     { gradient: "from-orange-500 to-amber-700",  emoji: "💪" },
+  triceps:    { gradient: "from-yellow-500 to-orange-600", emoji: "💪" },
+  quads:      { gradient: "from-green-500 to-emerald-700", emoji: "🦵" },
+  legs:       { gradient: "from-green-500 to-teal-700",    emoji: "🦵" },
+  glutes:     { gradient: "from-pink-500 to-rose-700",     emoji: "🍑" },
+  hamstrings: { gradient: "from-lime-500 to-green-700",    emoji: "🦵" },
+  abs:        { gradient: "from-indigo-500 to-blue-700",   emoji: "⚡" },
+  cardio:     { gradient: "from-rose-500 to-red-700",      emoji: "❤️" },
+  "full body":{ gradient: "from-emerald-500 to-teal-700",  emoji: "🔥" },
+};
 
-  // Animate the emoji in 4 steps
+// ── Animated fallback card ───────────────────────────────────────────────────
+function FallbackCard({
+  name,
+  muscle,
+  size,
+}: {
+  name: string;
+  muscle: string;
+  size: string;
+}) {
+  const [frame, setFrame] = useState(0);
+  const style =
+    MUSCLE_STYLE[muscle.toLowerCase()] || {
+      gradient: "from-emerald-500 to-teal-700",
+      emoji: "💪",
+    };
+  const h = { sm: "h-36", md: "h-52", lg: "h-64" }[size] || "h-52";
+  const scales = ["scale-100", "scale-110", "scale-125", "scale-110"];
+
   useEffect(() => {
-    const id = setInterval(() => setStep(s => (s + 1) % 4), 700);
-    return () => clearInterval(id);
+    const t = setInterval(() => setFrame((f) => (f + 1) % 4), 700);
+    return () => clearInterval(t);
   }, []);
 
-  const scaleClasses = ["scale-100 translate-y-0", "scale-110 -translate-y-2", "scale-125 -translate-y-3", "scale-110 -translate-y-1"];
-  const bg = data?.bg || fallbackGradient;
-  const displayEmoji = data?.emoji || "💪";
-  const desc = data?.description || "Follow instructions below";
-
   return (
-    <div className={`w-full ${h} bg-gradient-to-br ${bg} rounded-2xl flex flex-col items-center justify-center relative overflow-hidden select-none`}>
-      {/* Animated background rings */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-        <div className="w-40 h-40 rounded-full border border-white/10 animate-ping" style={{ animationDuration: "3s" }} />
-        <div className="absolute w-28 h-28 rounded-full border border-white/15" />
-        <div className="absolute w-16 h-16 rounded-full bg-white/10 animate-pulse" />
+    <div
+      className={`w-full ${h} bg-gradient-to-br ${style.gradient} rounded-2xl flex flex-col items-center justify-center relative overflow-hidden select-none`}
+    >
+      {/* Animated rings */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div
+          className="w-28 h-28 rounded-full bg-white/10 animate-ping"
+          style={{ animationDuration: "2s" }}
+        />
+        <div className="absolute w-20 h-20 rounded-full bg-white/10 animate-pulse" />
       </div>
 
-      {/* Animated emoji */}
+      {/* Pulsing emoji */}
       <span
-        className={`${emojiSize} relative z-10 transition-all duration-500 ease-in-out ${scaleClasses[step]}`}
-        style={{ filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.4))" }}
+        className={`text-5xl mb-2 relative z-10 transition-transform duration-300 ${scales[frame]}`}
       >
-        {displayEmoji}
+        {style.emoji}
       </span>
 
-      {/* Name */}
-      <p className={`text-white font-bold ${font} relative z-10 mt-3 px-4 text-center leading-tight`}
-        style={{ textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
+      <p className="text-white font-bold text-sm relative z-10 px-3 text-center">
         {name}
       </p>
+      <p className="text-white/70 text-xs relative z-10 mt-1">
+        See instructions ↓
+      </p>
+    </div>
+  );
+}
 
-      {/* Description */}
-      <p className="text-white/75 text-xs relative z-10 mt-1 px-4 text-center">{desc}</p>
+// ── Main component ───────────────────────────────────────────────────────────
+export default function ExerciseGif({
+  gifUrl,
+  exerciseId,
+  name,
+  muscle,
+  size = "md",
+}: Props) {
+  const [currentFrame, setCurrentFrame] = useState(0);
+  const [loaded, setLoaded] = useState<Record<number, boolean>>({});
+  const [failed, setFailed] = useState<Record<number, boolean>>({});
 
-      {/* Muscle badge */}
-      <div className="absolute top-2 left-2 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5">
-        <span className="text-white/90 text-xs font-medium">{muscle}</span>
-      </div>
+  const h = { sm: "h-36", md: "h-52", lg: "h-64" }[size] || "h-52";
 
-      {/* "See steps below" hint */}
-      <div className="absolute bottom-2 right-2 bg-black/30 backdrop-blur-sm rounded-full px-2 py-0.5">
-        <span className="text-white/70 text-xs">Steps ↓</span>
-      </div>
+  // Determine image URLs
+  const githubUrls =
+    exerciseId ? getFrameUrls(exerciseId) : (["", ""] as [string, string]);
+
+  const [frame0, frame1] = githubUrls;
+  const hasGithub = !!frame0;
+
+  // Use gifUrl from exerciseDB as last resort fallback
+  const imageUrls: string[] = hasGithub
+    ? [frame0, frame1].filter(Boolean)
+    : gifUrl
+    ? [gifUrl]
+    : [];
+
+  const allFailed =
+    imageUrls.length > 0 &&
+    imageUrls.every((_, i) => failed[i]);
+
+  // Animate between frame 0 and frame 1 every 1.2 seconds
+  useEffect(() => {
+    if (imageUrls.length <= 1) return;
+    if (!loaded[0] || !loaded[1]) return; // wait until both loaded
+
+    const t = setInterval(() => {
+      setCurrentFrame((f) => (f + 1) % imageUrls.length);
+    }, 1200);
+    return () => clearInterval(t);
+  }, [imageUrls.length, loaded]);
+
+  // Show fallback if no URLs or all failed
+  if (imageUrls.length === 0 || allFailed) {
+    return (
+      <FallbackCard name={name} muscle={muscle} size={size} />
+    );
+  }
+
+  return (
+    <div
+      className={`w-full ${h} bg-gray-800 rounded-2xl overflow-hidden relative`}
+    >
+      {/* Show fallback while loading */}
+      {!loaded[0] && (
+        <div className="absolute inset-0 z-10">
+          <FallbackCard name={name} muscle={muscle} size={size} />
+        </div>
+      )}
+
+      {/* Preload both frames, display current */}
+      {imageUrls.map((url, i) => (
+        <img
+          key={url}
+          src={url}
+          alt={i === 0 ? `${name} — start` : `${name} — end`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+            i === currentFrame && loaded[i]
+              ? "opacity-100 z-20"
+              : "opacity-0 z-0"
+          }`}
+          onLoad={() => setLoaded((prev) => ({ ...prev, [i]: true }))}
+          onError={() => setFailed((prev) => ({ ...prev, [i]: true }))}
+          loading="lazy"
+        />
+      ))}
+
+      {/* Muscle label */}
+      {loaded[0] && (
+        <div className="absolute top-2 left-2 z-30 bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full font-medium">
+          {muscle}
+        </div>
+      )}
+
+      {/* Frame dots */}
+      {imageUrls.length > 1 && loaded[0] && loaded[1] && (
+        <div className="absolute bottom-2 right-2 z-30 flex gap-1">
+          {imageUrls.map((_, i) => (
+            <div
+              key={i}
+              className={`w-1.5 h-1.5 rounded-full transition-all ${
+                i === currentFrame ? "bg-white" : "bg-white/40"
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

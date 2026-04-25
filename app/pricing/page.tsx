@@ -101,7 +101,7 @@ export default async function PricingPage() {
         {/* Header */}
         <div className="text-center mb-10">
           <span className="text-emerald-400 font-semibold text-sm uppercase tracking-wider">Simple Pricing</span>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white mt-3 mb-4">Free to Start. Forever.</h1>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white mt-3 mb-4">Free 2 Start. Forever.</h1>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto">Workouts are always free. 7-day diet trial included. Upgrade only when you need more.</p>
 
           {/* Trust badges */}

@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint",
+    "test": "playwright test tests/e2e",
+    "test:ui": "playwright test tests/e2e --ui",
+    "test:report": "playwright show-report",
+    "test:headed": "playwright test tests/e2e --headed"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.0.11",
@@ -45,12 +49,5 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "typescript": "^5"
-  },
-  "scripts": {
-  "dev": "next dev",
-  "build": "prisma generate && next build",
-  "start": "next start",
-  "lint": "eslint",
-  "test": "playwright test"
-}
+  }
 }
