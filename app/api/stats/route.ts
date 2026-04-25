@@ -3,14 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  // ← AUTH CHECK MUST BE FIRST LINE
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-    const dbUser = await prisma.user.findUnique({ where: { clerkId: userId } });
-    if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  try {
+    const dbUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+    });
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -33,6 +38,7 @@ export async function GET() {
       targetWeight: dbUser.targetWeight,
     });
   } catch (error: any) {
+    console.error("Stats error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -1,14 +1,25 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Playwright output — DON'T commit these
+playwright-report/
+test-results/
+*.png
+
+# OS
+.DS_Store
+Thumbs.db
 
 # testing
 /coverage
@@ -47,6 +58,4 @@ next-env.d.ts
 
 /lib/generated/prisma
 
-# Playwright
-playwright-report/
-test-results/
+

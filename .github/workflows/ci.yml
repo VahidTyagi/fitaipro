@@ -8,15 +8,15 @@ on:
 
 jobs:
   playwright-tests:
-    name: 🧪 Automation Tests (Must Pass for Deploy)
+    name: 🧪 Pre-Deploy Automation Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
-      - name: 📥 Checkout code
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: ⚙️ Setup Node.js 20
+      - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -25,11 +25,11 @@ jobs:
       - name: 📦 Install dependencies
         run: npm ci
 
-      - name: 🌐 Install Playwright Chromium
+      - name: 🌐 Install Playwright
         run: npx playwright install chromium --with-deps
 
-      - name: 🧪 Run public tests (T01-T12)
-        id: public_tests
+      - name: 🧪 Run Tests T01-T12
+        id: tests
         run: |
           npx playwright test tests/e2e \
             --grep "T0[1-9]|T1[0-2]" \
@@ -37,45 +37,34 @@ jobs:
         env:
           PLAYWRIGHT_TEST_BASE_URL: https://fitaipro-five.vercel.app
 
-      - name: ❌ DEPLOY BLOCKED — Tests Failed
+      - name: 🚫 Deploy blocked — notify
         if: failure()
         run: |
           echo ""
-          echo "════════════════════════════════════════════════════════════"
-          echo "  🚫 DEPLOYMENT BLOCKED — AUTOMATION TESTS FAILED"
-          echo "════════════════════════════════════════════════════════════"
-          echo ""
-          echo "  One or more pre-deploy test cases have FAILED."
+          echo "═══════════════════════════════════════════════════════"
+          echo "  🚫 DEPLOYMENT BLOCKED — TESTS FAILED"
+          echo "═══════════════════════════════════════════════════════"
           echo "  Code cannot go to production until all tests pass."
           echo ""
-          echo "  📋 Action Required:"
-          echo "  ┌──────────────────────────────────────────────────────"
-          echo "  │  1. Check the test report above for failed tests"
-          echo "  │  2. Fix the failing code"
-          echo "  │  3. Run locally: npx playwright test tests/e2e"
-          echo "  │  4. All tests must pass before pushing again"
-          echo "  └──────────────────────────────────────────────────────"
+          echo "  📋 What to do:"
+          echo "     1. Look at the failed test above"
+          echo "     2. Fix the code issue"
+          echo "     3. npx playwright test tests/e2e (run locally)"
+          echo "     4. All 12 must pass → then push"
           echo ""
-          echo "  📞 Contact: fitaipro.official@gmail.com"
-          echo "  🔗 Report: Download 'playwright-report' artifact above"
-          echo ""
-          echo "════════════════════════════════════════════════════════════"
+          echo "  📧 Contact: fitaipro.official@gmail.com"
+          echo "═══════════════════════════════════════════════════════"
           exit 1
 
-      - name: 📊 Upload test report
+      - name: 📊 Upload report
         uses: actions/upload-artifact@v4
-        if: always()          # upload even on failure
+        if: always()
         with:
-          name: playwright-report-${{ github.run_number }}
+          name: test-report-${{ github.run_number }}
           path: playwright-report/
-          retention-days: 30
+          retention-days: 14
 
-      - name: ✅ All tests passed — Deploy allowed
+      - name: ✅ Deploy approved
         if: success()
         run: |
-          echo ""
-          echo "════════════════════════════════════════════════════════════"
-          echo "  ✅ ALL AUTOMATION TESTS PASSED"
-          echo "  🚀 Deployment to production is APPROVED"
-          echo "  📅 $(date)"
-          echo "════════════════════════════════════════════════════════════"
+          echo "✅ 12/12 tests passed — Vercel will deploy"

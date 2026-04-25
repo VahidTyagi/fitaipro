@@ -7,26 +7,22 @@
 # Test info
 
 - Name: fitaipro.spec.ts >> FitAI Pro — Pre-Deploy Suite >> T09 — All API routes protected without auth (401/403)
-- Location: tests\e2e\fitaipro.spec.ts:132:7
+- Location: tests\e2e\fitaipro.spec.ts:132:5
 
 # Error details
 
 ```
-Error: ❌ https://fitaipro-five.vercel.app/api/stats should be protected but returned 200
+Error: ❌ SECURITY BUG: https://fitaipro-five.vercel.app/api/stats returned 200 — should be 401 or 403 when unauthenticated
 
-expect(received).toContain(expected) // indexOf
+expect(received).toBe(expected) // Object.is equality
 
-Expected value: 200
-Received array: [401, 403]
+Expected: true
+Received: false
 ```
 
 # Test source
 
 ```ts
-  52  |   }
-  53  | 
-  54  |   // Step 4: Wait for dashboard redirect
-  55  |   try {
   56  |     await page.waitForURL(/dashboard/, { timeout: 25_000 });
   57  |   } catch {
   58  |     // Check if we're still on sign-in page with error
@@ -102,127 +98,131 @@ Received array: [401, 403]
   128 |     expect(page.url()).toMatch(/sign-in|sign-up/);
   129 |   });
   130 | 
-  131 |   // ── T09 ──────────────────────────────────────────────────────────────────────
-  132 |   test("T09 — All API routes protected without auth (401/403)", async ({ page }) => {
-  133 |     const routes = [
-  134 |       { url: `${BASE}/api/stats`,              method: "GET"  as const },
-  135 |       { url: `${BASE}/api/workout/generate`,   method: "POST" as const },
-  136 |       { url: `${BASE}/api/nutrition/generate`, method: "POST" as const },
-  137 |       { url: `${BASE}/api/chat`,               method: "POST" as const },
-  138 |       { url: `${BASE}/api/user/plan`,          method: "GET"  as const },
-  139 |       { url: `${BASE}/api/onboarding`,         method: "POST" as const },
-  140 |     ];
+  131 |   // In tests/e2e/fitaipro.spec.ts — T09 section:
+  132 | test("T09 — All API routes protected without auth (401/403)", async ({ page }) => {
+  133 |   const routes = [
+  134 |     { url: `${BASE}/api/stats`,              method: "GET"  as const },
+  135 |     { url: `${BASE}/api/workout/generate`,   method: "POST" as const },
+  136 |     { url: `${BASE}/api/nutrition/generate`, method: "POST" as const },
+  137 |     { url: `${BASE}/api/chat`,               method: "POST" as const },
+  138 |     { url: `${BASE}/api/user/plan`,          method: "GET"  as const },
+  139 |     { url: `${BASE}/api/onboarding`,         method: "POST" as const },
+  140 |   ];
   141 | 
-  142 |     for (const route of routes) {
-  143 |       const res = await page.request.fetch(route.url, {
-  144 |         method: route.method,
-  145 |         headers: { "Content-Type": "application/json" },
-  146 |         data: route.method === "POST" ? "{}" : undefined,
-  147 |         failOnStatusCode: false,
-  148 |       });
-  149 |       expect(
-  150 |         [401, 403],
-  151 |         `❌ ${route.url} should be protected but returned ${res.status()}`
-> 152 |       ).toContain(res.status());
-      |         ^ Error: ❌ https://fitaipro-five.vercel.app/api/stats should be protected but returned 200
-  153 |     }
-  154 |   });
-  155 | 
-  156 |   // ── T10 ──────────────────────────────────────────────────────────────────────
-  157 |   test("T10 — PWA manifest exists and is valid JSON", async ({ page }) => {
-  158 |     const res = await page.request.get(`${BASE}/manifest.json`, {
-  159 |       failOnStatusCode: false,
-  160 |     });
-  161 |     expect(res.status(), "manifest.json should return 200").toBe(200);
-  162 |     const contentType = res.headers()["content-type"] || "";
-  163 |     // Should be JSON, not HTML
-  164 |     expect(contentType, "manifest.json should return JSON not HTML").not.toContain("text/html");
-  165 |     const text = await res.text();
-  166 |     let json: any;
-  167 |     try {
-  168 |       json = JSON.parse(text);
-  169 |     } catch {
-  170 |       throw new Error(`manifest.json is not valid JSON. Got: ${text.slice(0, 100)}`);
-  171 |     }
-  172 |     expect(json.name).toMatch(/FitAI/i);
-  173 |   });
-  174 | 
-  175 |   // ── T11 ──────────────────────────────────────────────────────────────────────
-  176 |   test("T11 — No critical JS errors on landing page", async ({ page }) => {
-  177 |     const errors: string[] = [];
-  178 |     page.on("console", (msg) => {
-  179 |       if (msg.type() === "error") errors.push(msg.text());
-  180 |     });
-  181 |     await page.goto(BASE, { waitUntil: "networkidle" });
-  182 |     const critical = errors.filter(
-  183 |       (e) =>
-  184 |         !e.includes("cdn") &&
-  185 |         !e.includes("favicon") &&
-  186 |         !e.includes("extension") &&
-  187 |         !e.includes("clerk") &&
-  188 |         !e.includes("third-party") &&
-  189 |         !e.includes("hotjar") &&
-  190 |         !e.includes("intercom")
-  191 |     );
-  192 |     expect(critical, `Critical JS errors found: ${critical.join(", ")}`).toHaveLength(0);
-  193 |   });
-  194 | 
-  195 |   // ── T12 ──────────────────────────────────────────────────────────────────────
-  196 |   test("T12 — Clerk webhook endpoint exists (not 404)", async ({ page }) => {
-  197 |     const res = await page.request.post(`${BASE}/api/webhooks/clerk`, {
-  198 |       data: "{}",
-  199 |       headers: { "Content-Type": "application/json" },
-  200 |       failOnStatusCode: false,
-  201 |     });
-  202 |     expect(res.status(), "Webhook route missing (404)").not.toBe(404);
-  203 |     // 400 = bad signature = route exists and is working correctly
-  204 |   });
-  205 | 
-  206 |   // ════════════════════════════════════════════════════════════════════════════
-  207 |   // AUTHENTICATED TESTS — T13 to T20
-  208 |   // Requires: vahidtyagi007+clerk_test@gmail.com account to exist in Clerk
-  209 |   // Setup: Sign up manually once at /sign-up with OTP 424242
+  142 |   for (const route of routes) {
+  143 |     const res = await page.request.fetch(route.url, {
+  144 |       method: route.method,
+  145 |       headers: { "Content-Type": "application/json" },
+  146 |       data: route.method === "POST" ? "{}" : undefined,
+  147 |       failOnStatusCode: false,
+  148 |     });
+  149 | 
+  150 |     const status = res.status();
+  151 |     const isProtected = status === 401 || status === 403;
+  152 | 
+  153 |     expect(
+  154 |       isProtected,
+  155 |       `❌ SECURITY BUG: ${route.url} returned ${status} — should be 401 or 403 when unauthenticated`
+> 156 |     ).toBe(true);
+      |       ^ Error: ❌ SECURITY BUG: https://fitaipro-five.vercel.app/api/stats returned 200 — should be 401 or 403 when unauthenticated
+  157 |   }
+  158 | });
+  159 | 
+  160 |   // ── T10 ──────────────────────────────────────────────────────────────────────
+  161 |   test("T10 — PWA manifest exists and is valid JSON", async ({ page }) => {
+  162 |     const res = await page.request.get(`${BASE}/manifest.json`, {
+  163 |       failOnStatusCode: false,
+  164 |     });
+  165 |     expect(res.status(), "manifest.json should return 200").toBe(200);
+  166 |     const contentType = res.headers()["content-type"] || "";
+  167 |     // Should be JSON, not HTML
+  168 |     expect(contentType, "manifest.json should return JSON not HTML").not.toContain("text/html");
+  169 |     const text = await res.text();
+  170 |     let json: any;
+  171 |     try {
+  172 |       json = JSON.parse(text);
+  173 |     } catch {
+  174 |       throw new Error(`manifest.json is not valid JSON. Got: ${text.slice(0, 100)}`);
+  175 |     }
+  176 |     expect(json.name).toMatch(/FitAI/i);
+  177 |   });
+  178 | 
+  179 |   // ── T11 ──────────────────────────────────────────────────────────────────────
+  180 |   test("T11 — No critical JS errors on landing page", async ({ page }) => {
+  181 |     const errors: string[] = [];
+  182 |     page.on("console", (msg) => {
+  183 |       if (msg.type() === "error") errors.push(msg.text());
+  184 |     });
+  185 |     await page.goto(BASE, { waitUntil: "networkidle" });
+  186 |     const critical = errors.filter(
+  187 |       (e) =>
+  188 |         !e.includes("cdn") &&
+  189 |         !e.includes("favicon") &&
+  190 |         !e.includes("extension") &&
+  191 |         !e.includes("clerk") &&
+  192 |         !e.includes("third-party") &&
+  193 |         !e.includes("hotjar") &&
+  194 |         !e.includes("intercom")
+  195 |     );
+  196 |     expect(critical, `Critical JS errors found: ${critical.join(", ")}`).toHaveLength(0);
+  197 |   });
+  198 | 
+  199 |   // ── T12 ──────────────────────────────────────────────────────────────────────
+  200 |   test("T12 — Clerk webhook endpoint exists (not 404)", async ({ page }) => {
+  201 |     const res = await page.request.post(`${BASE}/api/webhooks/clerk`, {
+  202 |       data: "{}",
+  203 |       headers: { "Content-Type": "application/json" },
+  204 |       failOnStatusCode: false,
+  205 |     });
+  206 |     expect(res.status(), "Webhook route missing (404)").not.toBe(404);
+  207 |     // 400 = bad signature = route exists and is working correctly
+  208 |   });
+  209 | 
   210 |   // ════════════════════════════════════════════════════════════════════════════
-  211 | 
-  212 |   // ── T13 ──────────────────────────────────────────────────────────────────────
-  213 |   test("T13 — Auth: Dashboard main page loads", async ({ page }) => {
-  214 |     await signInTestUser(page);
-  215 |     const body = await page.textContent("body");
-  216 |     expect(body, "Dashboard body missing expected content").toMatch(
-  217 |       /Dashboard|Welcome|Workout|workout/i
-  218 |     );
-  219 |   });
-  220 | 
-  221 |   // ── T14 ──────────────────────────────────────────────────────────────────────
-  222 |   test("T14 — Auth: Workout page loads", async ({ page }) => {
-  223 |     await signInTestUser(page);
-  224 |     await page.goto(`${BASE}/dashboard/workout`, { waitUntil: "domcontentloaded" });
-  225 |     await page.waitForTimeout(2000);
-  226 |     const body = await page.textContent("body");
-  227 |     expect(body).toMatch(/Workout|Exercise|Challenge|workout/i);
-  228 |   });
-  229 | 
-  230 |   // ── T15 ──────────────────────────────────────────────────────────────────────
-  231 |   test("T15 — Auth: Nutrition page loads", async ({ page }) => {
-  232 |     await signInTestUser(page);
-  233 |     await page.goto(`${BASE}/dashboard/nutrition`, { waitUntil: "domcontentloaded" });
-  234 |     await page.waitForTimeout(2000);
-  235 |     const body = await page.textContent("body");
-  236 |     expect(body).toMatch(/Nutrition|Diet|Plan|meal|Meal/i);
-  237 |   });
-  238 | 
-  239 |   // ── T16 ──────────────────────────────────────────────────────────────────────
-  240 |   test("T16 — Auth: AI Coach chat page loads", async ({ page }) => {
-  241 |     await signInTestUser(page);
-  242 |     await page.goto(`${BASE}/dashboard/chat`, { waitUntil: "domcontentloaded" });
-  243 |     await page.waitForTimeout(2000);
-  244 |     const body = await page.textContent("body");
-  245 |     expect(body).toMatch(/Coach|Chat|Ask|message|fitness/i);
-  246 |   });
-  247 | 
-  248 |   // ── T17 ──────────────────────────────────────────────────────────────────────
-  249 |   test("T17 — Auth: Progress page loads", async ({ page }) => {
-  250 |     await signInTestUser(page);
-  251 |     await page.goto(`${BASE}/dashboard/progress`, { waitUntil: "domcontentloaded" });
-  252 |     await page.waitForTimeout(2000);
+  211 |   // AUTHENTICATED TESTS — T13 to T20
+  212 |   // Requires: vahidtyagi007+clerk_test@gmail.com account to exist in Clerk
+  213 |   // Setup: Sign up manually once at /sign-up with OTP 424242
+  214 |   // ════════════════════════════════════════════════════════════════════════════
+  215 | 
+  216 |   // ── T13 ──────────────────────────────────────────────────────────────────────
+  217 |   test("T13 — Auth: Dashboard main page loads", async ({ page }) => {
+  218 |     await signInTestUser(page);
+  219 |     const body = await page.textContent("body");
+  220 |     expect(body, "Dashboard body missing expected content").toMatch(
+  221 |       /Dashboard|Welcome|Workout|workout/i
+  222 |     );
+  223 |   });
+  224 | 
+  225 |   // ── T14 ──────────────────────────────────────────────────────────────────────
+  226 |   test("T14 — Auth: Workout page loads", async ({ page }) => {
+  227 |     await signInTestUser(page);
+  228 |     await page.goto(`${BASE}/dashboard/workout`, { waitUntil: "domcontentloaded" });
+  229 |     await page.waitForTimeout(2000);
+  230 |     const body = await page.textContent("body");
+  231 |     expect(body).toMatch(/Workout|Exercise|Challenge|workout/i);
+  232 |   });
+  233 | 
+  234 |   // ── T15 ──────────────────────────────────────────────────────────────────────
+  235 |   test("T15 — Auth: Nutrition page loads", async ({ page }) => {
+  236 |     await signInTestUser(page);
+  237 |     await page.goto(`${BASE}/dashboard/nutrition`, { waitUntil: "domcontentloaded" });
+  238 |     await page.waitForTimeout(2000);
+  239 |     const body = await page.textContent("body");
+  240 |     expect(body).toMatch(/Nutrition|Diet|Plan|meal|Meal/i);
+  241 |   });
+  242 | 
+  243 |   // ── T16 ──────────────────────────────────────────────────────────────────────
+  244 |   test("T16 — Auth: AI Coach chat page loads", async ({ page }) => {
+  245 |     await signInTestUser(page);
+  246 |     await page.goto(`${BASE}/dashboard/chat`, { waitUntil: "domcontentloaded" });
+  247 |     await page.waitForTimeout(2000);
+  248 |     const body = await page.textContent("body");
+  249 |     expect(body).toMatch(/Coach|Chat|Ask|message|fitness/i);
+  250 |   });
+  251 | 
+  252 |   // ── T17 ──────────────────────────────────────────────────────────────────────
+  253 |   test("T17 — Auth: Progress page loads", async ({ page }) => {
+  254 |     await signInTestUser(page);
+  255 |     await page.goto(`${BASE}/dashboard/progress`, { waitUntil: "domcontentloaded" });
+  256 |     await page.waitForTimeout(2000);
 ```
