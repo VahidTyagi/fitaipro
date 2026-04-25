@@ -150,6 +150,7 @@ test.describe("FitAI Pro — Pre-Deploy Suite", () => {
         [401, 403],
         `❌ ${route.url} should be protected but returned ${res.status()}`
       ).toContain(res.status());
+      
     }
   });
 
