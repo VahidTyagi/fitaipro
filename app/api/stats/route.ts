@@ -5,8 +5,9 @@ import { NextResponse } from "next/server";
 export async function GET() {
   try {
     const { userId } = await auth();
-    // ← This was missing — add auth check
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const dbUser = await prisma.user.findUnique({ where: { clerkId: userId } });
     if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles } from "lucide-react";
 import {
   Zap,
   LayoutDashboard,
@@ -16,17 +15,12 @@ import {
   LogOut,
   History,
   MessageCircle,
+  Sparkles,
+  Shield, // ✅ added
 } from "lucide-react";
 import { useClerk } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import type { DbUser } from "@/types";
-
-// Add admin check and link:
-{isAdmin && (
-  <Link href="/dashboard/admin">
-    <Shield className="w-5 h-5" /> Admin
-  </Link>
-)}
 
 // ✅ Keep navItems OUTSIDE component
 const navItems = [
@@ -34,22 +28,13 @@ const navItems = [
   { label: "Workouts", href: "/dashboard/workout", icon: Dumbbell },
   { label: "History", href: "/dashboard/history", icon: History },
   { label: "Nutrition", href: "/dashboard/nutrition", icon: Apple },
-
-//   // Add to navItems array after Nutrition:
-// {
-//   href: "/dashboard/custom-plan",
-//   label: "Custom Plan",
-//   icon: Sparkles,
-//   badge: "Pro",
-// },
-
-{
-  href: "/dashboard/custom-plan",
-  label: "Custom Plan",
-  icon: Sparkles,
-  badge: "Pro",
-  badgeColor: "bg-amber-500/20 text-amber-400",
-},
+  {
+    href: "/dashboard/custom-plan",
+    label: "Custom Plan",
+    icon: Sparkles,
+    badge: "Pro",
+    badgeColor: "bg-amber-500/20 text-amber-400",
+  },
   { label: "AI Coach", href: "/dashboard/chat", icon: MessageCircle },
   { label: "Progress", href: "/dashboard/progress", icon: TrendingUp },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
@@ -59,6 +44,10 @@ export default function Sidebar({ user }: { user: DbUser }) {
   const pathname = usePathname();
   const { signOut } = useClerk();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // ✅ DEFINE ADMIN LOGIC HERE
+  const isAdmin = user?.email === "vahidtyagi007@gmail.com"; 
+  // 👉 replace with your actual admin email OR role check
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -100,7 +89,7 @@ export default function Sidebar({ user }: { user: DbUser }) {
         </div>
       </div>
 
-      {/* ✅ Nav Items (FIXED) */}
+      {/* Nav Items */}
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -122,6 +111,22 @@ export default function Sidebar({ user }: { user: DbUser }) {
             </Link>
           );
         })}
+
+        {/* ✅ ADMIN LINK (SAFE + CLEAN) */}
+        {isAdmin && (
+          <Link
+            href="/dashboard/admin"
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
+              pathname === "/dashboard/admin"
+                ? "bg-emerald-500/10 text-emerald-400"
+                : "text-gray-400 hover:text-white hover:bg-gray-800"
+            )}
+          >
+            <Shield className="w-5 h-5" />
+            Admin
+          </Link>
+        )}
       </nav>
 
       {/* Sign Out */}
@@ -171,11 +176,3 @@ export default function Sidebar({ user }: { user: DbUser }) {
     </>
   );
 }
-
-
-
-
-
-
-
-

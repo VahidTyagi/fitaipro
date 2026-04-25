@@ -7,7 +7,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata2: Metadata = {
-  // ...existing...
+  title: "FitAI Pro — AI Fitness Coach | Free Workouts + Personalized Plans",
+  description: "AI-powered fitness coaching. Free workouts forever.",
   manifest: "/manifest.json",
 };
 

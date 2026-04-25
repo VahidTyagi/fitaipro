@@ -66,11 +66,8 @@ function getFrameUrls(exerciseId: string): [string, string] {
   ];
 }
 
-// ── Muscle styles ────────────────────────────────────────────────────────────
-const MUSCLE_STYLE: Record
-  string,
-  { gradient: string; emoji: string }
-> = {
+// CORRECT — put on one line:
+const MUSCLE_STYLE: Record<string, { gradient: string; emoji: string }> = {
   chest:      { gradient: "from-red-500 to-rose-700",      emoji: "💪" },
   back:       { gradient: "from-blue-500 to-indigo-700",   emoji: "🔙" },
   shoulders:  { gradient: "from-purple-500 to-violet-700", emoji: "🏋️" },

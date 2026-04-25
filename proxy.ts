@@ -9,6 +9,13 @@ const isPublicRoute = createRouteMatcher([
   "/privacy(.*)",
   "/terms(.*)",
   "/api/webhooks(.*)",
+  // ← Add these static files:
+  "/manifest.json",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/favicon.ico",
+  "/_next(.*)",
+  "/static(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
