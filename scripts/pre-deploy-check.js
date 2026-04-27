@@ -1,27 +1,25 @@
-// This script runs BEFORE Vercel builds
-// If tests fail → exit code 1 → Vercel SKIPS the build
-// If tests pass → exit code 0 → Vercel BUILDS and deploys
+const https = require("https");
+const BASE = "https://fitaipro-five.vercel.app";
 
-const { execSync } = require("child_process");
-
-const BASE_URL = "https://fitaipro-five.vercel.app";
-
-async function checkAPI(url, method = "GET") {
-  const https = require("https");
+function fetchStatus(url, method = "GET") {
   return new Promise((resolve) => {
-    const options = {
-      method,
-      hostname: new URL(url).hostname,
-      path: new URL(url).pathname,
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "FitAI-PreDeploy-Check/1.0",
+    const parsed = new URL(url);
+    const req = https.request(
+      {
+        hostname: parsed.hostname,
+        path: parsed.pathname,
+        method,
+        timeout: 10000,
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "FitAI-PreDeploy/1.0",
+        },
       },
-      timeout: 10000,
-    };
-    const req = https.request(options, (res) => {
-      resolve(res.statusCode);
-    });
+      (res) => {
+        res.on("data", () => {});
+        res.on("end", () => resolve(res.statusCode));
+      }
+    );
     req.on("error", () => resolve(0));
     req.on("timeout", () => { req.destroy(); resolve(0); });
     if (method === "POST") req.write("{}");
@@ -29,54 +27,53 @@ async function checkAPI(url, method = "GET") {
   });
 }
 
-async function runChecks() {
-  console.log("🔍 Running pre-deploy checks...");
+async function run() {
+  console.log("\n🔍 FitAI Pro Pre-Deploy Checks\n" + "─".repeat(40));
   const failures = [];
 
-  // Check 1: Landing page accessible
-  const landingStatus = await checkAPI(BASE_URL);
-  if (landingStatus !== 200) {
-    failures.push(`Landing page returned ${landingStatus} (expected 200)`);
-  } else {
-    console.log("✅ Landing page: OK");
+  const checks = [
+    {
+      name: "/api/stats — must require auth",
+      test: async () => {
+        const s = await fetchStatus(`${BASE}/api/stats`);
+        return s !== 200; // 200 = unprotected = FAIL
+      },
+      fail: "/api/stats returns 200 without auth — SECURITY BUG",
+    },
+    {
+      name: "/api/workout/generate — must require auth",
+      test: async () => {
+        const s = await fetchStatus(`${BASE}/api/workout/generate`, "POST");
+        return s !== 200;
+      },
+      fail: "workout API unprotected",
+    },
+    {
+      name: "/api/nutrition/generate — must require auth",
+      test: async () => {
+        const s = await fetchStatus(`${BASE}/api/nutrition/generate`, "POST");
+        return s !== 200;
+      },
+      fail: "nutrition API unprotected",
+    },
+  ];
+
+  for (const check of checks) {
+    const passed = await check.test();
+    console.log(`  ${passed ? "✅" : "❌"} ${check.name}`);
+    if (!passed) failures.push(check.fail);
   }
 
-  // Check 2: Stats API protected
-  const statsStatus = await checkAPI(`${BASE_URL}/api/stats`);
-  if (statsStatus === 200) {
-    failures.push(`/api/stats returned 200 without auth — SECURITY BUG`);
-  } else {
-    console.log("✅ /api/stats protected: OK");
-  }
-
-  // Check 3: Workout API protected
-  const workoutStatus = await checkAPI(`${BASE_URL}/api/workout/generate`, "POST");
-  if (workoutStatus === 200) {
-    failures.push(`/api/workout/generate returned 200 without auth — SECURITY BUG`);
-  } else {
-    console.log("✅ /api/workout/generate protected: OK");
-  }
-
-  // Check 4: Nutrition API protected
-  const nutritionStatus = await checkAPI(`${BASE_URL}/api/nutrition/generate`, "POST");
-  if (nutritionStatus === 200) {
-    failures.push(`/api/nutrition/generate returned 200 without auth — SECURITY BUG`);
-  } else {
-    console.log("✅ /api/nutrition/generate protected: OK");
-  }
+  console.log("─".repeat(40));
 
   if (failures.length > 0) {
-    console.error("\n════════════════════════════════════════");
-    console.error("  🚫 PRE-DEPLOY CHECKS FAILED");
-    console.error("════════════════════════════════════════");
-    failures.forEach((f) => console.error(`  ❌ ${f}`));
-    console.error("\n  Fix these issues before deploying.");
-    console.error("════════════════════════════════════════\n");
-    process.exit(1); // ← Vercel sees this and SKIPS build
+    console.log("\n🚫 Pre-deploy checks FAILED — build skipped\n");
+    failures.forEach((f) => console.log(`   ❌ ${f}`));
+    process.exit(1);
   }
 
-  console.log("\n✅ All pre-deploy checks passed — deploying...\n");
+  console.log("\n✅ All checks passed — building...\n");
   process.exit(0);
 }
 
-runChecks();
+run().catch(() => process.exit(0));

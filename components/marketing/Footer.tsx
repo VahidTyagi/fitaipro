@@ -40,24 +40,32 @@ export default function Footer() {
               <li><a href="#" className="hover:text-white transition-colors">About</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
               <li>
-                <Link
+                <a
                   href="https://www.linkedin.com/company/fitai-pro"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="hover:text-white transition-colors"
                 >
                   LinkedIn
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
 
-          {/* Legal */}
+          {/* Legal — only ONE section */}
           <div>
             <h4 className="text-white font-semibold mb-4">Legal</h4>
             <ul className="space-y-2 text-sm">
               <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
               <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
-              <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
+              <li>
+                <a
+                  href="mailto:fitaipro.official@gmail.com"
+                  className="hover:text-white transition-colors"
+                >
+                  Contact Us
+                </a>
+              </li>
             </ul>
           </div>
         </div>

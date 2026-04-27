@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # Dependencies
 node_modules/
 
@@ -7,55 +5,16 @@ node_modules/
 .next/
 out/
 
-# Environment
+# Environment — NEVER commit these
 .env
 .env.local
 .env.production
+.env.*.local
 
-# Playwright output — DON'T commit these
+# Playwright output ONLY — be specific
 playwright-report/
 test-results/
-*.png
 
 # OS
 .DS_Store
 Thumbs.db
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-
-# env local
-.env.local
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-/app/generated/prisma
-
-/lib/generated/prisma
-
-

@@ -3,18 +3,25 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  // ← AUTH CHECK MUST BE FIRST LINE
   const { userId } = await auth();
+
   if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
   try {
     const dbUser = await prisma.user.findUnique({
       where: { clerkId: userId },
     });
+
     if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
     }
 
     const today = new Date();
@@ -27,7 +34,9 @@ export async function GET() {
       prisma.workout.findFirst({
         where: { userId: dbUser.id, completedAt: { gte: today } },
       }),
-      prisma.meal.count({ where: { userId: dbUser.id } }),
+      prisma.meal.count({
+        where: { userId: dbUser.id },
+      }),
     ]);
 
     return NextResponse.json({
@@ -39,6 +48,9 @@ export async function GET() {
     });
   } catch (error: any) {
     console.error("Stats error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
