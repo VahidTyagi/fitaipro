@@ -29,66 +29,69 @@ function buildCleanName(
   return "User";
 }
 
-function ErrorPage({ message }: { message: string }) {
-  return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
-      <div className="text-center max-w-md">
-        <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-2xl">⚠️</span>
-        </div>
-        <h1 className="text-white text-xl font-bold mb-2">Something went wrong</h1>
-        <p className="text-gray-400 text-sm mb-6">{message}</p>
-        <div className="flex gap-3 justify-center">
-        <a>
-            href="/dashboard"
-            className="bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-emerald-600 transition-colors"
-         
-            Try Again
-          </a>
-          <a>
-            href="/sign-out"
-            className="bg-gray-800 border border-gray-700 text-gray-300 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors"
-          
-            Sign Out
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Step 1: Get Clerk user ID
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  // Step 2: Get Clerk user details (non-blocking)
   let clerkUser = null;
   try {
     clerkUser = await currentUser();
-  } catch (err) {
-    console.error("Clerk currentUser failed:", err);
+  } catch {
+    // Non-blocking
   }
 
-  // Step 3: Find or create DB user
   let dbUser = null;
 
   try {
-    dbUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
+    dbUser = await prisma.user.findUnique({ where: { clerkId: userId } });
   } catch (err) {
     console.error("DB findUnique error:", err);
+    // DB unavailable — show maintenance page
     return (
-      <ErrorPage message="Database temporarily unavailable. Please try again in a moment." />
+      <html>
+        <body>
+          <div
+            style={{
+              minHeight: "100vh",
+              background: "#030712",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: "sans-serif",
+            }}
+          >
+            <div style={{ textAlign: "center", padding: "20px" }}>
+              <div style={{ fontSize: "48px", marginBottom: "16px" }}>⚠️</div>
+              <h1 style={{ color: "white", marginBottom: "8px" }}>
+                Connection Error
+              </h1>
+              <p style={{ color: "#9ca3af", marginBottom: "24px" }}>
+                Database temporarily unavailable. Please try again.
+              </p>
+              <a
+                href="/dashboard"
+                style={{
+                  background: "#10b981",
+                  color: "white",
+                  padding: "12px 24px",
+                  borderRadius: "12px",
+                  textDecoration: "none",
+                  fontWeight: "bold",
+                }}
+              >
+                Retry
+              </a>
+            </div>
+          </div>
+        </body>
+      </html>
     );
   }
 
-  // New user — create their DB record
   if (!dbUser) {
     const email = clerkUser?.emailAddresses[0]?.emailAddress || "";
     const name = buildCleanName(
@@ -99,35 +102,53 @@ export default async function DashboardLayout({
     );
 
     try {
+      // Use raw SQL to avoid Prisma schema mismatch issues
       dbUser = await prisma.user.upsert({
         where: { clerkId: userId },
         update: {
-          name: name || undefined,
-          imageUrl: clerkUser?.imageUrl || undefined,
+          imageUrl: clerkUser?.imageUrl ?? null,
         },
         create: {
           clerkId: userId,
           email,
           name,
-          imageUrl: clerkUser?.imageUrl || null,
+          imageUrl: clerkUser?.imageUrl ?? null,
           trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         },
       });
     } catch (err) {
-      console.error("User create/upsert failed:", err);
-      return (
-        <ErrorPage message="Could not create your profile. Please sign out and sign in again." />
-      );
+      console.error("User create failed:", err);
+      // Last resort — try minimal create
+      try {
+        dbUser = await prisma.$queryRaw`
+          INSERT INTO "User" ("id", "clerkId", "email", "name", "createdAt", "updatedAt", "trialEnd")
+          VALUES (
+            gen_random_uuid()::text,
+            ${userId},
+            ${clerkUser?.emailAddresses[0]?.emailAddress ?? ""},
+            ${name},
+            NOW(),
+            NOW(),
+            NOW() + INTERVAL '7 days'
+          )
+          ON CONFLICT ("clerkId") DO UPDATE SET "updatedAt" = NOW()
+          RETURNING *
+        ` as any;
+        if (Array.isArray(dbUser)) dbUser = dbUser[0];
+      } catch (sqlErr) {
+        console.error("Raw SQL also failed:", sqlErr);
+        redirect("/sign-in");
+      }
     }
   }
 
-  // Fix broken name silently (email used as name)
+  // Fix broken name
   if (
-    dbUser &&
-    dbUser.name &&
+    dbUser?.name &&
     (dbUser.name.includes("+") || dbUser.name.includes("@"))
   ) {
-    const email = clerkUser?.emailAddresses[0]?.emailAddress || dbUser.email;
+    const email =
+      clerkUser?.emailAddresses[0]?.emailAddress || dbUser.email;
     const name = buildCleanName(
       clerkUser?.fullName,
       clerkUser?.firstName,
@@ -144,10 +165,7 @@ export default async function DashboardLayout({
     }
   }
 
-  // Redirect to onboarding if not completed
-  if (!dbUser?.onboardingDone) {
-    redirect("/onboarding");
-  }
+  if (!dbUser?.onboardingDone) redirect("/onboarding");
 
   const status = getSubscriptionStatus(dbUser);
 
