@@ -84,4 +84,9 @@ async function run() {
   console.log(`📁 Location: /public/gifs/\n`);
 }
 
+<<<<<<< HEAD
 run();
+=======
+run();
+
+>>>>>>> b0685791ef1bcaa61c79626d6a0da9e16b21e2cb
