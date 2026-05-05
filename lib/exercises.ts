@@ -12,7 +12,8 @@ export interface Exercise {
 }
 
 // ExerciseDB CDN (works in browser, 403 from server — normal)
-const CDN = "https://v2.exercisedb.io/image";
+//const CDN = "https://v2.exercisedb.io/image";
+const CDN = "/gifs";
 
 export const EXERCISE_LIBRARY: Exercise[] = [
   // ══════════ HOME — NO EQUIPMENT ══════════════════════════════════════════

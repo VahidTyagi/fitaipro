@@ -1,6 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Lock, RefreshCw, Apple, Flame, Zap, Droplets, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Lock, RefreshCw, Apple, Flame, Zap, Droplets,
+  ChevronLeft, ChevronRight, Clock
+} from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import MealPhotoAnalyzer from "@/components/dashboard/MealPhotoAnalyzer";
@@ -13,6 +16,10 @@ interface Meal {
   carbs: number;
   fat: number;
   quantity: string;
+  qualityScore?: string;
+  timing?: string;
+  whyGood?: string;
+  avoid?: string;
 }
 
 interface Day {
@@ -42,6 +49,22 @@ const mealBadgeColors: Record<string, string> = {
   Snack: "bg-blue-500/20 text-blue-400",
   Dinner: "bg-purple-500/20 text-purple-400",
 };
+
+function QualityBadge({ score }: { score?: string }) {
+  if (!score) return null;
+  const config: Record<string, { color: string; label: string }> = {
+    Excellent: { color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", label: "⭐ Excellent" },
+    Good:      { color: "bg-blue-500/20 text-blue-400 border-blue-500/30",         label: "✅ Good" },
+    Moderate:  { color: "bg-amber-500/20 text-amber-400 border-amber-500/30",       label: "⚠️ Moderate" },
+    Poor:      { color: "bg-red-500/20 text-red-400 border-red-500/30",             label: "❌ Poor" },
+  };
+  const c = config[score] || config.Moderate;
+  return (
+    <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${c.color}`}>
+      {c.label}
+    </span>
+  );
+}
 
 export default function NutritionPage() {
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
@@ -73,7 +96,11 @@ export default function NutritionPage() {
   const generatePlan = async (force = false) => {
     setGenerating(true);
     try {
-      const res = await fetch("/api/nutrition/generate", { method: "POST" });
+      const res = await fetch("/api/nutrition/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force }),
+      });
       const data = await res.json();
 
       if (res.status === 403) {
@@ -81,25 +108,22 @@ export default function NutritionPage() {
         toast.error("Upgrade to access diet plans");
         return;
       }
-
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) throw new Error(data.details || "Failed");
 
       setMealPlan(data.mealPlan);
       setSelectedDay(1);
-
-      if (data.cached) {
-        toast.success("Showing your saved plan ✅");
-      } else {
-        toast.success(`AI generated your ${data.mealPlan.planDays}-day meal plan! 🥗`);
-      }
-    } catch {
-      toast.error("Failed to generate. Check API connection.");
+      toast.success(
+        data.cached
+          ? "Showing your saved plan ✅"
+          : `AI generated your ${data.mealPlan.planDays}-day meal plan! 🥗`
+      );
+    } catch (e: any) {
+      toast.error(e.message || "Failed to generate. Try again.");
     } finally {
       setGenerating(false);
     }
   };
 
-  // Auto-load plan on mount if user has access
   useEffect(() => {
     if (loaded && userPlan.trialActive && !mealPlan) {
       generatePlan();
@@ -128,7 +152,13 @@ export default function NutritionPage() {
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-6 text-left">
           <p className="text-white font-semibold mb-3">Pro includes:</p>
           <ul className="space-y-2 text-sm text-gray-400">
-            {["30-day AI meal plan (monthly)", "Indian cuisine optimized", "Regenerate anytime", "Macro tracking", "Calorie targets"].map((f) => (
+            {[
+              "30-day AI meal plan (monthly)",
+              "Indian cuisine optimized",
+              "Meal quality scores (Poor → Excellent)",
+              "Meal timing intelligence",
+              "Macro tracking & calorie targets",
+            ].map((f) => (
               <li key={f} className="flex items-center gap-2">
                 <span className="text-emerald-400">✓</span> {f}
               </li>
@@ -171,26 +201,30 @@ export default function NutritionPage() {
       </div>
 
       {/* Status Banner */}
+      <div className={`rounded-2xl p-4 border ${
+        userPlan.isPaid
+          ? "bg-emerald-500/10 border-emerald-500/20"
+          : "bg-amber-500/10 border-amber-500/20"
+      }`}>
+        <p className={`text-sm font-medium ${userPlan.isPaid ? "text-emerald-400" : "text-amber-400"}`}>
+          {userPlan.isPaid ? (
+            <>
+              ✅ {userPlan.plan.charAt(0).toUpperCase() + userPlan.plan.slice(1)} Plan Active
+              {userPlan.billingCycle === "yearly" ? " (Yearly)" : " (Monthly)"}
+              {" — "}{userPlan.daysLeft} days remaining
+              {userPlan.subscriptionEnd &&
+                ` · Renews ${new Date(userPlan.subscriptionEnd).toLocaleDateString("en-IN", {
+                  day: "numeric", month: "short", year: "numeric",
+                })}`}
+            </>
+          ) : (
+            `🎁 Free trial — ${userPlan.daysLeft} day${userPlan.daysLeft !== 1 ? "s" : ""} left. After trial, diet plans require Pro.`
+          )}
+        </p>
+      </div>
+
       {/* Meal Photo Analyzer */}
-<MealPhotoAnalyzer isPaid={userPlan.isPaid} isTrialActive={userPlan.trialActive} />
-<div className={`rounded-2xl p-4 border ${
-  userPlan.isPaid
-    ? "bg-emerald-500/10 border-emerald-500/20"
-    : "bg-amber-500/10 border-amber-500/20"
-}`}>
-  <p className={`text-sm font-medium ${userPlan.isPaid ? "text-emerald-400" : "text-amber-400"}`}>
-    {userPlan.isPaid ? (
-      <>
-        ✅ {userPlan.plan.charAt(0).toUpperCase() + userPlan.plan.slice(1)} Plan Active
-        {userPlan.billingCycle === "yearly" ? " (Yearly)" : " (Monthly)"}
-        {" — "}{userPlan.daysLeft} days remaining
-        {userPlan.subscriptionEnd && ` · Renews ${new Date(userPlan.subscriptionEnd).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`}
-      </>
-    ) : (
-      `🎁 Free trial — ${userPlan.daysLeft} day${userPlan.daysLeft !== 1 ? "s" : ""} left. After trial, diet plans require Pro.`
-    )}
-  </p>
-</div>
+      <MealPhotoAnalyzer isPaid={userPlan.isPaid} isTrialActive={userPlan.trialActive} />
 
       {/* Generating state */}
       {generating && (
@@ -201,10 +235,16 @@ export default function NutritionPage() {
           <h2 className="text-white font-bold text-xl mb-2">
             Creating your {userPlan.isPaid ? "30" : "7"}-day Indian meal plan...
           </h2>
-          <p className="text-gray-400 text-sm">Personalizing for your goals and diet preferences</p>
+          <p className="text-gray-400 text-sm">
+            Personalizing for your goals, diet preferences, and meal timing intelligence
+          </p>
           <div className="flex justify-center gap-1 mt-4">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+              <div
+                key={i}
+                className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              />
             ))}
           </div>
         </div>
@@ -217,9 +257,9 @@ export default function NutritionPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: "Daily Calories", value: `${mealPlan.targetCalories} kcal`, icon: Flame, color: "text-orange-400" },
-              { label: "Daily Protein", value: `${mealPlan.targetProtein}g`, icon: Zap, color: "text-emerald-400" },
-              { label: "Days Planned", value: `${mealPlan.days.length} days`, icon: Apple, color: "text-blue-400" },
-              { label: "Meals/Day", value: "4 meals", icon: Droplets, color: "text-purple-400" },
+              { label: "Daily Protein",  value: `${mealPlan.targetProtein}g`,       icon: Zap,   color: "text-emerald-400" },
+              { label: "Days Planned",   value: `${mealPlan.days.length} days`,     icon: Apple, color: "text-blue-400" },
+              { label: "Meals/Day",      value: "4 meals",                          icon: Droplets, color: "text-purple-400" },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="bg-gray-900 border border-gray-800 rounded-2xl p-4 text-center">
                 <Icon className={`w-5 h-5 ${color} mx-auto mb-2`} />
@@ -233,7 +273,7 @@ export default function NutritionPage() {
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-gray-400 text-sm">Select Day</p>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSelectedDay(Math.max(1, selectedDay - 1))}
                   disabled={selectedDay === 1}
@@ -285,28 +325,69 @@ export default function NutritionPage() {
                     </span>
                   </div>
                 </div>
+
                 <div className="space-y-4">
                   {day.meals.map((meal, i) => (
-                    <div key={i} className={`border rounded-2xl p-5 ${mealColors[meal.type] || "border-gray-700 bg-gray-800/30"}`}>
+                    <div
+                      key={i}
+                      className={`border rounded-2xl p-5 ${
+                        mealColors[meal.type] || "border-gray-700 bg-gray-800/30"
+                      }`}
+                    >
                       <div className="flex items-start justify-between gap-4 mb-3">
-                        <div>
-                          <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${mealBadgeColors[meal.type] || "bg-gray-700 text-gray-400"}`}>
-                            {meal.type}
-                          </span>
-                          <h4 className="text-white font-semibold mt-2">{meal.name}</h4>
+                        <div className="flex-1 min-w-0">
+                          {/* Meal type badge + quality score */}
+                          <div className="flex items-center gap-2 flex-wrap mb-2">
+                            <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                              mealBadgeColors[meal.type] || "bg-gray-700 text-gray-400"
+                            }`}>
+                              {meal.type}
+                            </span>
+                            <QualityBadge score={meal.qualityScore} />
+                          </div>
+
+                          {/* Meal name */}
+                          <h4 className="text-white font-semibold">{meal.name}</h4>
+
+                          {/* Quantity */}
                           {meal.quantity && (
                             <p className="text-gray-400 text-sm mt-0.5">📦 {meal.quantity}</p>
                           )}
+
+                          {/* Timing */}
+                          {meal.timing && (
+                            <p className="text-gray-500 text-xs mt-1 flex items-center gap-1">
+                              <Clock className="w-3 h-3 flex-shrink-0" />
+                              {meal.timing}
+                            </p>
+                          )}
+
+                          {/* Why good */}
+                          {meal.whyGood && (
+                            <p className="text-emerald-400/80 text-xs mt-1">
+                              💡 {meal.whyGood}
+                            </p>
+                          )}
+
+                          {/* Avoid */}
+                          {meal.avoid && (
+                            <p className="text-amber-400/80 text-xs mt-1">
+                              ⚠️ {meal.avoid}
+                            </p>
+                          )}
                         </div>
-                        <span className="text-white font-bold text-lg whitespace-nowrap">
+
+                        <span className="text-white font-bold text-lg whitespace-nowrap flex-shrink-0">
                           {meal.calories} cal
                         </span>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
+
+                      {/* Macros */}
+                      <div className="grid grid-cols-3 gap-2 mt-3">
                         {[
                           { label: "Protein", value: `${meal.protein}g`, color: "text-emerald-400" },
-                          { label: "Carbs", value: `${meal.carbs}g`, color: "text-blue-400" },
-                          { label: "Fat", value: `${meal.fat}g`, color: "text-orange-400" },
+                          { label: "Carbs",   value: `${meal.carbs}g`,   color: "text-blue-400" },
+                          { label: "Fat",     value: `${meal.fat}g`,     color: "text-orange-400" },
                         ].map(({ label, value, color }) => (
                           <div key={label} className="bg-black/20 rounded-xl p-2 text-center">
                             <p className={`font-bold text-sm ${color}`}>{value}</p>

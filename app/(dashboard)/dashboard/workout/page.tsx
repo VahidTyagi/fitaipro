@@ -11,6 +11,12 @@ import { cn } from "@/lib/utils";
 import { sounds } from "@/lib/sounds";
 import RestTimer from "@/components/dashboard/RestTimer";
 
+import WorkoutTimer from "@/components/dashboard/WorkoutTimer";
+
+// Add state:
+const [actualSeconds, setActualSeconds] = useState(0);
+const [adjustedCalories, setAdjustedCalories] = useState(0);
+
 // Body focus filters
 const BODY_PARTS = ["All", "Abs", "Arms", "Chest", "Legs", "Shoulders", "Back", "Cardio"];
 
@@ -599,6 +605,8 @@ export default function WorkoutPage() {
       </div>
     );
   }
+
+  
 
   // ── MAIN WORKOUT HOME PAGE ────────────────────
   return (

@@ -16,13 +16,13 @@ import {
   History,
   MessageCircle,
   Sparkles,
-  Shield, // ✅ added
+  Shield,
 } from "lucide-react";
-import { useClerk } from "@clerk/nextjs";
+import { SignOutButton } from "@clerk/nextjs"; // ✅ updated
 import { cn } from "@/lib/utils";
 import type { DbUser } from "@/types";
 
-// ✅ Keep navItems OUTSIDE component
+// ✅ Nav items outside
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Workouts", href: "/dashboard/workout", icon: Dumbbell },
@@ -42,12 +42,9 @@ const navItems = [
 
 export default function Sidebar({ user }: { user: DbUser }) {
   const pathname = usePathname();
-  const { signOut } = useClerk();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // ✅ DEFINE ADMIN LOGIC HERE
-  const isAdmin = user?.email === "vahidtyagi007@gmail.com"; 
-  // 👉 replace with your actual admin email OR role check
+  const isAdmin = user?.email === "vahidtyagi007@gmail.com";
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -63,7 +60,7 @@ export default function Sidebar({ user }: { user: DbUser }) {
         </Link>
       </div>
 
-      {/* User info */}
+      {/* User info (TOP) */}
       <div className="p-4 border-b border-gray-800">
         <div className="flex items-center gap-3">
           {user.imageUrl ? (
@@ -89,7 +86,7 @@ export default function Sidebar({ user }: { user: DbUser }) {
         </div>
       </div>
 
-      {/* Nav Items */}
+      {/* Nav */}
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -112,7 +109,7 @@ export default function Sidebar({ user }: { user: DbUser }) {
           );
         })}
 
-        {/* ✅ ADMIN LINK (SAFE + CLEAN) */}
+        {/* Admin */}
         {isAdmin && (
           <Link
             href="/dashboard/admin"
@@ -129,36 +126,31 @@ export default function Sidebar({ user }: { user: DbUser }) {
         )}
       </nav>
 
-      {/* Sign Out */}
-      <div className="p-4 border-t border-gray-800">
-        <button
-          onClick={() => signOut({ redirectUrl: "/" })}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all w-full"
-        >
-          <LogOut className="w-5 h-5" />
-          Sign Out
-        </button>
+      {/* ✅ Bottom Sticky Section (BEST PRACTICE) */}
+      <div className="mt-auto border-t border-gray-800 p-4">
+        <SignOutButton>
+          <button className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-all">
+            <LogOut className="w-5 h-5" />
+            Sign Out
+          </button>
+        </SignOutButton>
       </div>
     </div>
   );
 
   return (
     <>
-      {/* Desktop Sidebar */}
+      {/* Desktop */}
       <aside className="hidden md:flex w-64 bg-gray-900 border-r border-gray-800 flex-col flex-shrink-0">
         <SidebarContent />
       </aside>
 
-      {/* Mobile Toggle Button */}
+      {/* Mobile Toggle */}
       <button
         className="md:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-gray-900 border border-gray-700 rounded-xl flex items-center justify-center text-white"
         onClick={() => setMobileOpen(!mobileOpen)}
       >
-        {mobileOpen ? (
-          <X className="w-5 h-5" />
-        ) : (
-          <Menu className="w-5 h-5" />
-        )}
+        {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
 
       {/* Mobile Sidebar */}

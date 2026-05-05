@@ -122,6 +122,7 @@ export default function OnboardingPage() {
             {[
               { id: "male", emoji: "👨", label: "Male" },
               { id: "female", emoji: "👩", label: "Female" },
+              { id: "other",  emoji: "🧑", label: "Other" },
             ].map(g => (
               <button
                 key={g.id}

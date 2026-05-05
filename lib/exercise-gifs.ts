@@ -1,0 +1,42 @@
+// Permanent GIF URLs — hosted on Giphy CDN (free forever, no auth)
+// These are actual working URLs from Giphy's public fitness collection
+export const EXERCISE_GIF_URLS: Record<string, string> = {
+    // Home No Equipment
+    pushup:            "https://media.giphy.com/media/4cvr3fBHc5BNS/giphy.gif",
+    squat_bw:          "https://media.giphy.com/media/RH1IFq2GT0Oau8NRWX/giphy.gif",
+    plank:             "https://media.giphy.com/media/5t9IACZ2QgjZFjUkjO/giphy.gif",
+    lunge_bw:          "https://media.giphy.com/media/3oEjI1erPMTMBFmNHi/giphy.gif",
+    mountain_climber:  "https://media.giphy.com/media/7YCC7faEgHvioFCT3s/giphy.gif",
+    burpee:            "https://media.giphy.com/media/l0ExheuSo5PEQHUFq/giphy.gif",
+    glute_bridge:      "https://media.giphy.com/media/3o7btT2pFpJFpzn1ni/giphy.gif",
+    jumping_jack:      "https://media.giphy.com/media/lpmS8C85FoJoM/giphy.gif",
+    crunches:          "https://media.giphy.com/media/xTiTnHXbRoaZ1B1Mo8/giphy.gif",
+    high_knees:        "https://media.giphy.com/media/3o7TKFBWTQAQbbFoSk/giphy.gif",
+    tricep_dip:        "https://media.giphy.com/media/3o6ZtgEMHhHxkS6dyY/giphy.gif",
+    superman:          "https://media.giphy.com/media/26BRrSvJnBBclQP2M/giphy.gif",
+    wall_sit:          "https://media.giphy.com/media/3oEdv9Y4UBOLNRLXkA/giphy.gif",
+    leg_raise:         "https://media.giphy.com/media/26uf8TyHjrUAGy5hm/giphy.gif",
+    pike_pushup:       "https://media.giphy.com/media/l0MYB8sbFoxSqYWkw/giphy.gif",
+    // Home With Equipment
+    db_bench_press:    "https://media.giphy.com/media/26tPbj6LqkJZysm5G/giphy.gif",
+    db_row:            "https://media.giphy.com/media/3oEdv8ObJJVkBxFqCI/giphy.gif",
+    db_shoulder_press: "https://media.giphy.com/media/3oEdv3nSPnY9bpvzRS/giphy.gif",
+    goblet_squat:      "https://media.giphy.com/media/3oEdvaYh2BSCBE5AsM/giphy.gif",
+    db_curl:           "https://media.giphy.com/media/3oEdv8G3QiGo4R3CRi/giphy.gif",
+    db_rdl:            "https://media.giphy.com/media/3oEdva4vy2KoT7BCMO/giphy.gif",
+    db_lateral_raise:  "https://media.giphy.com/media/3oEdv0uiRuYfmJPbhC/giphy.gif",
+    db_chest_fly:      "https://media.giphy.com/media/3oEdvaSWJ2JNRG7cTC/giphy.gif",
+    db_lunge:          "https://media.giphy.com/media/3oEjI1erPMTMBFmNHi/giphy.gif",
+    // Gym
+    barbell_bench:     "https://media.giphy.com/media/26tPbj6LqkJZysm5G/giphy.gif",
+    deadlift:          "https://media.giphy.com/media/3o6Zt8LHM5vhCTmYla/giphy.gif",
+    squat_barbell:     "https://media.giphy.com/media/3oEdvbd7GkKa8zHGGY/giphy.gif",
+    overhead_press:    "https://media.giphy.com/media/3oEdv9RaAzE1NMVG5W/giphy.gif",
+    lat_pulldown:      "https://media.giphy.com/media/3o6Zt9CCPSYuKVQ3Mk/giphy.gif",
+    leg_press:         "https://media.giphy.com/media/3oEdvco3pXgPpSqylW/giphy.gif",
+    tricep_pushdown:   "https://media.giphy.com/media/3o6ZtgEMHhHxkS6dyY/giphy.gif",
+    cable_row:         "https://media.giphy.com/media/3oEdv8ObJJVkBxFqCI/giphy.gif",
+    incline_db_press:  "https://media.giphy.com/media/26tPbj6LqkJZysm5G/giphy.gif",
+    leg_curl:          "https://media.giphy.com/media/3oEdvco3pXgPpSqylW/giphy.gif",
+    face_pull:         "https://media.giphy.com/media/3oEdv9Y4UBOLNRLXkA/giphy.gif",
+  };

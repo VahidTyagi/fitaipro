@@ -109,6 +109,7 @@ test.describe("FitAI Pro — Pre-Deploy Suite", () => {
     const body = await page.textContent("body");
     expect(body).toMatch(/Terms/i);
   });
+  
 
   // ── T08 ──────────────────────────────────────────────────────────────────────
   test("T08 — Dashboard redirects unauthenticated to sign-in", async ({ page }) => {
