@@ -6,55 +6,25 @@ import {
   ChevronUp, Play,
 } from "lucide-react";
 import toast from "react-hot-toast";
-
-
 import dynamic from "next/dynamic";
-const WorkoutTimer = dynamic(() => import("@/components/dashboard/WorkoutTimer"), { ssr: false });
+import ExerciseGif from "@/components/dashboard/ExerciseGif";
+
+const WorkoutTimer = dynamic(
+  () => import("@/components/dashboard/WorkoutTimer"),
+  { ssr: false }
+);
 
 // Body focus filters
-const BODY_PARTS = ["All", "Abs", "Arms", "Chest", "Legs", "Shoulders", "Back", "Cardio"];
+const BODY_PARTS = ["All","Abs","Arms","Chest","Legs","Shoulders","Back","Cardio"];
 
-// Challenge cards — like the app screenshots
+// Challenge cards
 const CHALLENGES = [
-  {
-    id: "full_body_28",
-    days: "28 DAYS",
-    title: "FULL BODY CHALLENGE",
-    desc: "Target all muscle groups and build your dream body in 4 weeks!",
-    color: "from-blue-600 to-blue-800",
-    type: "home_no_equipment",
-    focus: "All",
-  },
-  {
-    id: "abs_30",
-    days: "30 DAYS",
-    title: "GET RIPPED ABS",
-    desc: "Burn belly fat and build strong abs in 30 days!",
-    color: "from-teal-500 to-emerald-700",
-    type: "home_no_equipment",
-    focus: "Abs",
-  },
-  {
-    id: "upper_body_28",
-    days: "28 DAYS",
-    title: "MASSIVE UPPER BODY",
-    desc: "Sculpt your upper body — no equipment needed!",
-    color: "from-slate-600 to-slate-800",
-    type: "home_no_equipment",
-    focus: "Chest",
-  },
-  {
-    id: "calisthenics_28",
-    days: "28 DAYS",
-    title: "CALISTHENICS PLAN",
-    desc: "Maximize muscle gain and fat loss with bodyweight!",
-    color: "from-purple-600 to-purple-900",
-    type: "home_no_equipment",
-    focus: "All",
-  },
+  { id: "full_body_28", days: "28 DAYS", title: "FULL BODY CHALLENGE", desc: "Target all muscle groups and build your dream body in 4 weeks!", color: "from-blue-600 to-blue-800", type: "home_no_equipment", focus: "All" },
+  { id: "abs_30", days: "30 DAYS", title: "GET RIPPED ABS", desc: "Burn belly fat and build strong abs in 30 days!", color: "from-teal-500 to-emerald-700", type: "home_no_equipment", focus: "Abs" },
+  { id: "upper_body_28", days: "28 DAYS", title: "MASSIVE UPPER BODY", desc: "Sculpt your upper body — no equipment needed!", color: "from-slate-600 to-slate-800", type: "home_no_equipment", focus: "Chest" },
+  { id: "calisthenics_28", days: "28 DAYS", title: "CALISTHENICS PLAN", desc: "Maximize muscle gain and fat loss with bodyweight!", color: "from-purple-600 to-purple-900", type: "home_no_equipment", focus: "All" },
 ];
 
-// Preset workout plans per body focus
 const PRESET_WORKOUTS: Record<string, any[]> = {
   All: [
     { id: "fw1", title: "Full Body Burn", duration: "25 mins", exercises: 12, difficulty: 2, type: "home_no_equipment", focus: "All", emoji: "🔥" },
@@ -120,16 +90,12 @@ function DifficultyStars({ level }: { level: number }) {
   return (
     <div className="flex gap-0.5">
       {[1, 2, 3].map((i) => (
-        <Zap
-          key={i}
-          className={`w-4 h-4 ${i <= level ? "text-blue-500 fill-blue-500" : "text-gray-300"}`}
-        />
+        <Zap key={i} className={`w-4 h-4 ${i <= level ? "text-blue-500 fill-blue-500" : "text-gray-300"}`} />
       ))}
     </div>
   );
 }
 
-// Today's date strip like the app
 function WeekStrip({ workoutsDoneToday }: { workoutsDoneToday: boolean }) {
   const today = new Date();
   const days = [];
@@ -138,16 +104,11 @@ function WeekStrip({ workoutsDoneToday }: { workoutsDoneToday: boolean }) {
     d.setDate(today.getDate() + i);
     days.push(d);
   }
-
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
-        <div>
-          <h3 className="font-bold text-gray-900 text-base">Weekly Goal</h3>
-        </div>
-        <span className="text-blue-600 font-bold text-base">
-          {workoutsDoneToday ? 1 : 0}/6
-        </span>
+        <h3 className="font-bold text-gray-900 text-base">Weekly Goal</h3>
+        <span className="text-blue-600 font-bold text-base">{workoutsDoneToday ? 1 : 0}/6</span>
       </div>
       <div className="flex justify-between">
         {days.map((d, i) => {
@@ -185,6 +146,52 @@ function WeekStrip({ workoutsDoneToday }: { workoutsDoneToday: boolean }) {
   );
 }
 
+// Small thumbnail for exercise list rows
+function ExerciseThumbnail({ exerciseId, gifUrl, name }: { exerciseId: string; gifUrl: string | null; name: string }) {
+  // Use GitHub raw frame 0 as thumbnail (static, always loads)
+  const GITHUB_BASE = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
+  const FOLDERS: Record<string, string> = {
+    pushup: "Push-Up", squat_bw: "Bodyweight-Squat", plank: "Plank",
+    lunge_bw: "Lunge", mountain_climber: "Mountain-Climber", burpee: "Burpee",
+    glute_bridge: "Glute-Bridge", jumping_jack: "Jumping-Jacks", crunches: "Crunch",
+    high_knees: "High-Knee-Run-in-Place", tricep_dip: "Triceps-Dip", superman: "Superman",
+    wall_sit: "Wall-Sit", leg_raise: "Leg-Raise", pike_pushup: "Pike-Push-Up",
+    db_bench_press: "Dumbbell-Bench-Press", db_row: "Bent-Over-Dumbbell-Row",
+    db_shoulder_press: "Dumbbell-Shoulder-Press", goblet_squat: "Goblet-Squat",
+    db_curl: "Dumbbell-Bicep-Curl", db_rdl: "Romanian-Deadlift",
+    db_lateral_raise: "Lateral-Raise", db_chest_fly: "Dumbbell-Flyes",
+    db_lunge: "Dumbbell-Lunge", db_tricep_ext: "Triceps-Extension",
+    barbell_bench: "Barbell-Bench-Press", deadlift: "Barbell-Deadlift",
+    squat_barbell: "Barbell-Back-Squat", overhead_press: "Barbell-Overhead-Press",
+    lat_pulldown: "Lat-Pulldown", cable_fly: "Cable-Crossover",
+    leg_press: "Leg-Press", tricep_pushdown: "Triceps-Pushdown",
+    face_pull: "Face-Pull", cable_row: "Seated-Cable-Row",
+    incline_db_press: "Incline-Dumbbell-Press", leg_curl: "Lying-Leg-Curl",
+  };
+
+  const [err, setErr] = useState(false);
+  const folder = FOLDERS[exerciseId];
+  const src = !err && folder ? `${GITHUB_BASE}/${folder}/images/0.jpg` : null;
+
+  if (!src) {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
+        <span className="text-lg">💪</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={name}
+      className="w-full h-full object-cover"
+      onError={() => setErr(true)}
+      loading="lazy"
+    />
+  );
+}
+
 export default function WorkoutPage() {
   const [selectedBodyPart, setSelectedBodyPart] = useState("All");
   const [generating, setGenerating] = useState(false);
@@ -197,6 +204,19 @@ export default function WorkoutPage() {
   const [workoutCompleted, setWorkoutCompleted] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [workoutsDoneToday] = useState(false);
+  const [userGender, setUserGender] = useState<"male" | "female" | "other">("male");
+
+  // Get user gender for gender-specific GIFs
+  useEffect(() => {
+    fetch("/api/user/profile")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.gender === "female") setUserGender("female");
+        else if (d.gender === "other") setUserGender("other");
+        else setUserGender("male");
+      })
+      .catch(() => {});
+  }, []);
 
   const filteredWorkouts = PRESET_WORKOUTS[selectedBodyPart] || PRESET_WORKOUTS.All;
 
@@ -205,19 +225,16 @@ export default function WorkoutPage() {
     setWorkout(null);
     setWorkoutStarted(false);
     setCompletedExercises(new Set());
-
     try {
       const res = await fetch("/api/workout/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ workoutType: type, bodyFocus: focus }),
       });
-
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.details || "Failed to generate");
       }
-
       const data = await res.json();
       setWorkout(data.workout);
       setWorkoutId(data.workoutId);
@@ -233,11 +250,8 @@ export default function WorkoutPage() {
   const toggleExerciseDone = (key: string) => {
     setCompletedExercises((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
@@ -260,13 +274,11 @@ export default function WorkoutPage() {
     }
   };
 
-  // ── COMPLETED SCREEN ──────────────────────────
+  // ── COMPLETED SCREEN ──────────────────────────────────────────────────────
   if (workoutCompleted && workout) {
     const shareText = encodeURIComponent(
       `I just crushed ${workout.title} on FitAI Pro! 💪🔥\n${workout.duration}min · ~${workout.calories}cal\n\nTry it free: https://fitaipro-five.vercel.app`
     );
-    const whatsappUrl = `https://wa.me/?text=${shareText}`;
-  
     return (
       <div className="max-w-lg mx-auto text-center py-12 px-4">
         <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-emerald-500/30">
@@ -274,7 +286,6 @@ export default function WorkoutPage() {
         </div>
         <h1 className="text-3xl font-extrabold text-white mb-2">Workout Complete! 🎉</h1>
         <p className="text-gray-400 mb-8">{workout.duration} min · ~{workout.calories} cal burned</p>
-  
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
             { label: "Duration", value: `${workout.duration}m`, icon: Clock },
@@ -288,24 +299,16 @@ export default function WorkoutPage() {
             </div>
           ))}
         </div>
-  
         <a
-          href={whatsappUrl}
+          href={`https://wa.me/?text=${shareText}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 w-full bg-green-600 text-white font-bold py-3 rounded-2xl mb-3 hover:bg-green-700 transition-colors"
         >
           📲 Share on WhatsApp
         </a>
-  
         <button
-          onClick={() => {
-            setWorkout(null);
-            setWorkoutStarted(false);
-            setWorkoutCompleted(false);
-            setCompletedExercises(new Set());
-            setWorkoutId(null);
-          }}
+          onClick={() => { setWorkout(null); setWorkoutStarted(false); setWorkoutCompleted(false); setCompletedExercises(new Set()); setWorkoutId(null); }}
           className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-3 rounded-2xl hover:from-emerald-600 hover:to-teal-600 transition-all"
         >
           Do Another Workout
@@ -314,18 +317,19 @@ export default function WorkoutPage() {
     );
   }
 
-  // ── ACTIVE WORKOUT ────────────────────────────
+  // ── ACTIVE WORKOUT ────────────────────────────────────────────────────────
   if (workoutStarted && workout) {
     const allDone = completedExercises.size >= workout.exercises.length;
     return (
       <div className="max-w-3xl space-y-4">
+        {/* Timer */}
         <WorkoutTimer
-      plannedMinutes={workout.duration || 30}
-      plannedCalories={workout.calories || 200}
-    />
+          plannedMinutes={workout.duration || 30}
+          plannedCalories={workout.calories || 200}
+        />
+
         {/* Header */}
         <div className="flex items-center justify-between">
-
           <div>
             <h1 className="text-xl font-bold text-white">{workout.title}</h1>
             <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
@@ -359,7 +363,7 @@ export default function WorkoutPage() {
           <p className="text-gray-300 text-sm italic">&quot;{workout.coachTip}&quot;</p>
         </div>
 
-        {/* Exercises */}
+        {/* Exercise list */}
         <div className="space-y-3">
           {workout.exercises.map((ex, i) => {
             const key = `${ex.exerciseId}_${i}`;
@@ -379,17 +383,14 @@ export default function WorkoutPage() {
                     {isDone ? <CheckCircle className="w-5 h-5 text-white" /> : <span className="text-gray-400 font-bold text-sm">{i + 1}</span>}
                   </button>
 
-                  {/* GIF thumbnail */}
-                  {ex.gifUrl && (
-                    <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-gray-800">
-                      <img
-                        src={ex.gifUrl}
-                        alt={ex.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                      />
-                    </div>
-                  )}
+                  {/* Thumbnail — GitHub CDN frame 0 */}
+                  <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-gray-800">
+                    <ExerciseThumbnail
+                      exerciseId={ex.exerciseId}
+                      gifUrl={ex.gifUrl}
+                      name={ex.name}
+                    />
+                  </div>
 
                   <div className="flex-1 min-w-0">
                     <p className={`font-semibold text-sm ${isDone ? "text-gray-400 line-through" : "text-white"}`}>{ex.name}</p>
@@ -410,12 +411,20 @@ export default function WorkoutPage() {
                   </div>
                 </div>
 
-                {/* Expanded — GIF + instructions */}
+                {/* Expanded — animated GIF + instructions */}
                 {isOpen && (
                   <div className="px-4 pb-5 border-t border-gray-800 pt-4">
                     <div className="grid sm:grid-cols-2 gap-4">
-                      {/* GIF */}
-                  
+                      {/* Animated GIF — uses GitHub CDN 2-frame animation */}
+                      <ExerciseGif
+                        exerciseId={ex.exerciseId}
+                        gifUrl={ex.gifUrl}
+                        name={ex.name}
+                        muscle={ex.muscle}
+                        gender={userGender}
+                        size="md"
+                      />
+
                       {/* Instructions */}
                       <div className="space-y-3">
                         {/* Mobile sets/reps */}
@@ -494,14 +503,13 @@ export default function WorkoutPage() {
     );
   }
 
-  // ── WORKOUT PREVIEW ───────────────────────────
+  // ── WORKOUT PREVIEW ───────────────────────────────────────────────────────
   if (workout && !workoutStarted) {
     return (
       <div className="max-w-2xl space-y-5">
         <button onClick={() => setWorkout(null)} className="text-gray-400 hover:text-white text-sm flex items-center gap-1 transition-colors">
           ← Back
         </button>
-
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
           <div className="flex items-start justify-between mb-5">
             <div>
@@ -530,28 +538,18 @@ export default function WorkoutPage() {
             ))}
           </div>
 
-          {/* Coach tip */}
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-5">
             <p className="text-emerald-400 text-xs font-bold mb-1">🤖 AI COACH</p>
             <p className="text-gray-300 text-sm italic">&quot;{workout.coachTip}&quot;</p>
           </div>
 
-          {/* Exercise list with GIF thumbnails */}
+          {/* Exercise list with GitHub CDN thumbnails */}
           <div className="space-y-2 mb-6">
             {workout.exercises.map((ex, i) => (
               <div key={i} className="flex items-center gap-3 bg-gray-800/40 rounded-xl p-3">
-                {ex.gifUrl && (
-                  <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-700">
-                    <img
-                      src={ex.gifUrl}
-                      alt={ex.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center text-lg">💪</div>`;
-                      }}
-                    />
-                  </div>
-                )}
+                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-700">
+                  <ExerciseThumbnail exerciseId={ex.exerciseId} gifUrl={ex.gifUrl} name={ex.name} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-white text-sm font-medium">{ex.name}</span>
                   <span className="text-gray-500 text-xs ml-2">{ex.muscle}</span>
@@ -572,7 +570,7 @@ export default function WorkoutPage() {
     );
   }
 
-  // ── GENERATING ────────────────────────────────
+  // ── GENERATING ────────────────────────────────────────────────────────────
   if (generating) {
     return (
       <div className="max-w-md mx-auto text-center py-20">
@@ -590,12 +588,9 @@ export default function WorkoutPage() {
     );
   }
 
-  
-
-  // ── MAIN WORKOUT HOME PAGE ────────────────────
+  // ── MAIN WORKOUT HOME PAGE ────────────────────────────────────────────────
   return (
     <div className="max-w-2xl space-y-5">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Workouts</h1>
@@ -615,10 +610,9 @@ export default function WorkoutPage() {
         />
       </div>
 
-      {/* Weekly goal strip */}
       <WeekStrip workoutsDoneToday={workoutsDoneToday} />
 
-      {/* Challenge cards — horizontal scroll like the app */}
+      {/* Challenges */}
       <div>
         <h2 className="text-white font-bold text-lg mb-3">Challenges</h2>
         <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
@@ -641,7 +635,7 @@ export default function WorkoutPage() {
         </div>
       </div>
 
-      {/* Body Focus filter */}
+      {/* Body Focus */}
       <div>
         <h2 className="text-white font-bold text-lg mb-3">Body Focus</h2>
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
@@ -660,9 +654,8 @@ export default function WorkoutPage() {
           ))}
         </div>
       </div>
-      
 
-      {/* Workout cards list */}
+      {/* Workout cards */}
       <div className="space-y-3">
         {filteredWorkouts.map((w) => (
           <button
@@ -670,23 +663,20 @@ export default function WorkoutPage() {
             onClick={() => generateWorkout(w.type, w.focus)}
             className="w-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex items-center gap-4 hover:border-blue-300 dark:hover:border-emerald-500/50 hover:shadow-md transition-all text-left"
           >
-            {/* Emoji thumbnail */}
             <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center flex-shrink-0 text-3xl">
               {w.emoji}
             </div>
-
             <div className="flex-1 min-w-0">
               <h3 className="text-gray-900 dark:text-white font-bold text-base">{w.title}</h3>
               <p className="text-gray-500 dark:text-gray-400 text-sm">{w.duration} · {w.exercises} Exercises</p>
               <DifficultyStars level={w.difficulty} />
             </div>
-
             <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
           </button>
         ))}
       </div>
 
-      {/* Quick AI Generate */}
+      {/* Quick AI */}
       <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-3">
           <Zap className="w-5 h-5 text-emerald-400" />

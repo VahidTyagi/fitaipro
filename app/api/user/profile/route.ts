@@ -2,32 +2,32 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export async function PATCH(req: Request) {
+export async function GET() {
   try {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { name } = await req.json();
-
-    if (!name?.trim()) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
-    }
-
-    // Clean the name — remove email-like patterns
-    const cleanName = name.trim()
-      .replace(/[+].*/, "") // remove +suffix
-      .trim();
-
-    if (cleanName.length < 2) {
-      return NextResponse.json({ error: "Name too short" }, { status: 400 });
-    }
-
-    await prisma.user.update({
+    const user = await prisma.user.findUnique({
       where: { clerkId: userId },
-      data: { name: cleanName },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        gender: true,        // ← must be here
+        plan: true,
+        goal: true,
+        fitnessLevel: true,
+        currentWeight: true,
+        targetWeight: true,
+        height: true,
+        age: true,
+        dietType: true,
+        imageUrl: true,
+      },
     });
 
-    return NextResponse.json({ success: true, name: cleanName });
+    if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(user);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
