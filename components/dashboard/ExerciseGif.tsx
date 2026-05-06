@@ -1,6 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
-import { EXERCISE_GIF_URLS } from "@/lib/exercise-gifs";
+//import { EXERCISE_GIF_URLS } from "@/lib/exercise-gifs";
+
+// Try to import GIF URLs - won't crash if file doesn't exist
+let EXERCISE_GIF_URLS: Record<string, string> = {};
+try {
+  EXERCISE_GIF_URLS = require("@/lib/exercise-gifs").EXERCISE_GIF_URLS || {};
+} catch {
+  EXERCISE_GIF_URLS = {};
+}
 
 interface Props {
   exerciseId?: string;

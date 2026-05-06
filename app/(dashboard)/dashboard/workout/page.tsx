@@ -11,7 +11,9 @@ import { cn } from "@/lib/utils";
 import { sounds } from "@/lib/sounds";
 import RestTimer from "@/components/dashboard/RestTimer";
 
-import WorkoutTimer from "@/components/dashboard/WorkoutTimer";
+
+import dynamic from "next/dynamic";
+const WorkoutTimer = dynamic(() => import("@/components/dashboard/WorkoutTimer"), { ssr: false });
 
 // Add state:
 const [actualSeconds, setActualSeconds] = useState(0);
@@ -338,8 +340,13 @@ export default function WorkoutPage() {
     const allDone = completedExercises.size >= workout.exercises.length;
     return (
       <div className="max-w-3xl space-y-4">
+        <WorkoutTimer
+      plannedMinutes={workout.duration || 30}
+      plannedCalories={workout.calories || 200}
+    />
         {/* Header */}
         <div className="flex items-center justify-between">
+
           <div>
             <h1 className="text-xl font-bold text-white">{workout.title}</h1>
             <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
@@ -676,6 +683,7 @@ export default function WorkoutPage() {
           ))}
         </div>
       </div>
+      
 
       {/* Workout cards list */}
       <div className="space-y-3">
