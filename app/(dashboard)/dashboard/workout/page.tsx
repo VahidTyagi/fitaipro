@@ -6,18 +6,10 @@ import {
   ChevronUp, Play,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import ExerciseGif from "@/components/dashboard/ExerciseGif";
-import { cn } from "@/lib/utils";
-import { sounds } from "@/lib/sounds";
-import RestTimer from "@/components/dashboard/RestTimer";
 
 
 import dynamic from "next/dynamic";
 const WorkoutTimer = dynamic(() => import("@/components/dashboard/WorkoutTimer"), { ssr: false });
-
-// Add state:
-const [actualSeconds, setActualSeconds] = useState(0);
-const [adjustedCalories, setAdjustedCalories] = useState(0);
 
 // Body focus filters
 const BODY_PARTS = ["All", "Abs", "Arms", "Chest", "Legs", "Shoulders", "Back", "Cardio"];
@@ -205,8 +197,6 @@ export default function WorkoutPage() {
   const [workoutCompleted, setWorkoutCompleted] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [workoutsDoneToday] = useState(false);
-  const [showRestTimer, setShowRestTimer] = useState(false);
-  const [restSeconds, setRestSeconds] = useState(45);
 
   const filteredWorkouts = PRESET_WORKOUTS[selectedBodyPart] || PRESET_WORKOUTS.All;
 
@@ -240,9 +230,6 @@ export default function WorkoutPage() {
     }
   };
 
-  // const [showRestTimer, setShowRestTimer] = useState(false);
-  // const [restSeconds, setRestSeconds] = useState(45);
-
   const toggleExerciseDone = (key: string) => {
     setCompletedExercises((prev) => {
       const next = new Set(prev);
@@ -250,14 +237,6 @@ export default function WorkoutPage() {
         next.delete(key);
       } else {
         next.add(key);
-        sounds.exerciseDone();
-        // Parse rest time and show timer
-        const ex = workout?.exercises[parseInt(key.split("_").pop() || "0")];
-        if (ex) {
-          const restSecs = parseInt(ex.rest) || 45;
-          setRestSeconds(restSecs);
-          setTimeout(() => setShowRestTimer(true), 300);
-        }
       }
       return next;
     });
@@ -436,8 +415,7 @@ export default function WorkoutPage() {
                   <div className="px-4 pb-5 border-t border-gray-800 pt-4">
                     <div className="grid sm:grid-cols-2 gap-4">
                       {/* GIF */}
-                      <ExerciseGif gifUrl={ex.gifUrl} name={ex.name} muscle={ex.muscle} size="md" />
-
+                  
                       {/* Instructions */}
                       <div className="space-y-3">
                         {/* Mobile sets/reps */}
@@ -491,12 +469,11 @@ export default function WorkoutPage() {
         <button
           onClick={handleCompleteWorkout}
           disabled={completing}
-          className={cn(
-            "w-full font-bold py-4 rounded-2xl transition-all text-lg flex items-center justify-center gap-2",
+          className={`w-full font-bold py-4 rounded-2xl transition-all text-lg flex items-center justify-center gap-2 ${
             allDone
               ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
               : "bg-gray-800 text-gray-400 border border-gray-700"
-          )}
+          }`}
         >
           {completing ? (
             <><RefreshCw className="w-5 h-5 animate-spin" /> Saving...</>
@@ -585,7 +562,7 @@ export default function WorkoutPage() {
           </div>
 
           <button
-            onClick={() => { sounds.workoutStart(); setWorkoutStarted(true); }}
+            onClick={() => setWorkoutStarted(true)}
             className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-4 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all text-lg flex items-center justify-center gap-2"
           >
             <Play className="w-5 h-5" /> Start Workout
