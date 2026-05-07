@@ -11,8 +11,8 @@ export interface Exercise {
   caloriesPerMin: number;
 }
 
-// GitHub raw CDN — no hotlink blocking, always works
-const G = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
+// GIFs served from /public/gifs/ — run scripts/download-exercise-gifs.js to populate
+const G = "/api/gif";
 
 export const EXERCISE_LIBRARY: Exercise[] = [
   // ══ HOME — NO EQUIPMENT ══════════════════════════════════════════
@@ -23,7 +23,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "chest_triceps",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Push-Up/images/0.jpg`,
+    gifUrl: `${G}/pushup.gif`,
     instructions: [
       "Start in a high plank — hands slightly wider than shoulders",
       "Lower your chest toward the floor, elbows at 45°",
@@ -40,7 +40,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "legs",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Bodyweight-Squat/images/0.jpg`,
+    gifUrl: `${G}/squat_bw.gif`,
     instructions: [
       "Feet shoulder-width apart, toes slightly out",
       "Push hips back and bend knees",
@@ -57,7 +57,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "core",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Plank/images/0.jpg`,
+    gifUrl: `${G}/plank.gif`,
     instructions: [
       "Forearm plank — elbows under shoulders",
       "Body in straight line head to heels",
@@ -74,7 +74,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "legs",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Lunge/images/0.jpg`,
+    gifUrl: `${G}/lunge_bw.gif`,
     instructions: [
       "Stand tall, feet hip-width apart",
       "Step one foot back, lower back knee to floor",
@@ -91,7 +91,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "core",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Mountain-Climber/images/0.jpg`,
+    gifUrl: `${G}/mountain_climber.gif`,
     instructions: [
       "Start in a high plank position",
       "Drive one knee toward your chest",
@@ -108,7 +108,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "cardio",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Burpee/images/0.jpg`,
+    gifUrl: `${G}/burpee.gif`,
     instructions: [
       "From standing, drop hands to floor",
       "Jump feet back into a plank",
@@ -125,7 +125,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "glutes_hamstrings",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Glute-Bridge/images/0.jpg`,
+    gifUrl: `${G}/glute_bridge.gif`,
     instructions: [
       "Lie on back, knees bent, feet flat",
       "Push through heels to lift hips",
@@ -142,7 +142,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "cardio",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Jumping-Jacks/images/0.jpg`,
+    gifUrl: `${G}/jumping_jack.gif`,
     instructions: [
       "Stand with feet together, arms at sides",
       "Jump feet out while raising arms overhead",
@@ -159,7 +159,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "core",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Crunch/images/0.jpg`,
+    gifUrl: `${G}/crunches.gif`,
     instructions: [
       "Lie on back, knees bent, feet flat",
       "Hands lightly behind your head",
@@ -176,7 +176,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "cardio",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/High-Knee-Run-in-Place/images/0.jpg`,
+    gifUrl: `${G}/high_knees.gif`,
     instructions: [
       "Stand with feet hip-width apart",
       "Run in place driving knees to hip height",
@@ -193,7 +193,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "chest_triceps",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Triceps-Dip/images/0.jpg`,
+    gifUrl: `${G}/tricep_dip.gif`,
     instructions: [
       "Sit on chair edge, hands beside hips",
       "Slide forward off edge",
@@ -210,7 +210,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "back_biceps",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Superman/images/0.jpg`,
+    gifUrl: `${G}/superman.gif`,
     instructions: [
       "Lie face down, arms extended overhead",
       "Simultaneously lift arms, chest and legs",
@@ -227,7 +227,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "legs",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Wall-Sit/images/0.jpg`,
+    gifUrl: `${G}/wall_sit.gif`,
     instructions: [
       "Back flat against a wall",
       "Slide down until thighs parallel to floor",
@@ -244,7 +244,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "core",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Leg-Raise/images/0.jpg`,
+    gifUrl: `${G}/leg_raise.gif`,
     instructions: [
       "Lie flat on back, hands under glutes",
       "Raise both legs to 90° with control",
@@ -261,7 +261,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "shoulders",
     equipment: "bodyweight",
     type: "home_no_equipment",
-    gifUrl: `${G}/Pike-Push-Up/images/0.jpg`,
+    gifUrl: `${G}/pike_pushup.gif`,
     instructions: [
       "Start in downward-dog — hips high",
       "Head between arms, looking at feet",
@@ -272,7 +272,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     caloriesPerMin: 7,
   },
 
-  // ══ HOME — WITH EQUIPMENT ══════════════════════════════════════════
+  // ══ HOME — WITH EQUIPMENT ═════════════════════════════════════════
   {
     id: "db_bench_press",
     name: "Dumbbell Bench Press",
@@ -280,7 +280,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "chest_triceps",
     equipment: "dumbbell",
     type: "home_with_equipment",
-    gifUrl: `${G}/Dumbbell-Bench-Press/images/0.jpg`,
+    gifUrl: `${G}/db_bench_press.gif`,
     instructions: [
       "Lie on bench or floor, dumbbells at chest",
       "Press straight up until arms extended",
@@ -297,7 +297,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "back_biceps",
     equipment: "dumbbell",
     type: "home_with_equipment",
-    gifUrl: `${G}/Bent-Over-Dumbbell-Row/images/0.jpg`,
+    gifUrl: `${G}/db_row.gif`,
     instructions: [
       "Hinge at hips, back flat, dumbbells hanging",
       "Pull dumbbells to your hips",
@@ -314,7 +314,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "shoulders",
     equipment: "dumbbell",
     type: "home_with_equipment",
-    gifUrl: `${G}/Dumbbell-Shoulder-Press/images/0.jpg`,
+    gifUrl: `${G}/db_shoulder_press.gif`,
     instructions: [
       "Dumbbells at shoulder height, palms forward",
       "Press overhead to full extension",
@@ -331,7 +331,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "legs",
     equipment: "dumbbell",
     type: "home_with_equipment",
-    gifUrl: `${G}/Goblet-Squat/images/0.jpg`,
+    gifUrl: `${G}/goblet_squat.gif`,
     instructions: [
       "Hold one dumbbell at chest with both hands",
       "Squat deep keeping chest up",
@@ -348,7 +348,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "back_biceps",
     equipment: "dumbbell",
     type: "home_with_equipment",
-    gifUrl: `${G}/Dumbbell-Bicep-Curl/images/0.jpg`,
+    gifUrl: `${G}/db_curl.gif`,
     instructions: [
       "Stand, dumbbells at sides, palms forward",
       "Curl to shoulder level",
@@ -365,7 +365,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "glutes_hamstrings",
     equipment: "dumbbell",
     type: "home_with_equipment",
-    gifUrl: `${G}/Romanian-Deadlift/images/0.jpg`,
+    gifUrl: `${G}/db_rdl.gif`,
     instructions: [
       "Hold dumbbells in front of thighs",
       "Hinge at hips pushing them back, back flat",
@@ -382,7 +382,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "shoulders",
     equipment: "dumbbell",
     type: "home_with_equipment",
-    gifUrl: `${G}/Lateral-Raise/images/0.jpg`,
+    gifUrl: `${G}/db_lateral_raise.gif`,
     instructions: [
       "Dumbbells at sides, slight elbow bend",
       "Raise arms out to shoulder height",
@@ -399,7 +399,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "chest_triceps",
     equipment: "dumbbell",
     type: "home_with_equipment",
-    gifUrl: `${G}/Dumbbell-Flyes/images/0.jpg`,
+    gifUrl: `${G}/db_chest_fly.gif`,
     instructions: [
       "Lie on back, dumbbells above chest, slight elbow bend",
       "Open arms wide in arc",
@@ -416,7 +416,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "legs",
     equipment: "dumbbell",
     type: "home_with_equipment",
-    gifUrl: `${G}/Dumbbell-Lunge/images/0.jpg`,
+    gifUrl: `${G}/db_lunge.gif`,
     instructions: [
       "Hold dumbbells at sides, standing tall",
       "Step forward with one leg",
@@ -433,7 +433,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "chest_triceps",
     equipment: "dumbbell",
     type: "home_with_equipment",
-    gifUrl: `${G}/Triceps-Extension/images/0.jpg`,
+    gifUrl: `${G}/db_tricep_ext.gif`,
     instructions: [
       "Hold one dumbbell overhead with both hands",
       "Lower behind head by bending elbows",
@@ -452,7 +452,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "chest_triceps",
     equipment: "barbell",
     type: "gym",
-    gifUrl: `${G}/Barbell-Bench-Press/images/0.jpg`,
+    gifUrl: `${G}/barbell_bench.gif`,
     instructions: [
       "Grip bar slightly wider than shoulder-width",
       "Lower to mid-chest with control",
@@ -469,7 +469,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "back_biceps",
     equipment: "barbell",
     type: "gym",
-    gifUrl: `${G}/Barbell-Deadlift/images/0.jpg`,
+    gifUrl: `${G}/deadlift.gif`,
     instructions: [
       "Bar over mid-foot, hip-width stance",
       "Hinge, grip bar, flat back — chest up",
@@ -486,7 +486,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "legs",
     equipment: "barbell",
     type: "gym",
-    gifUrl: `${G}/Barbell-Back-Squat/images/0.jpg`,
+    gifUrl: `${G}/squat_barbell.gif`,
     instructions: [
       "Bar on upper traps, feet shoulder-width",
       "Toes out 30°",
@@ -503,7 +503,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "shoulders",
     equipment: "barbell",
     type: "gym",
-    gifUrl: `${G}/Barbell-Overhead-Press/images/0.jpg`,
+    gifUrl: `${G}/overhead_press.gif`,
     instructions: [
       "Grip just outside shoulder-width",
       "Press to full lockout overhead",
@@ -520,7 +520,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "back_biceps",
     equipment: "cable",
     type: "gym",
-    gifUrl: `${G}/Lat-Pulldown/images/0.jpg`,
+    gifUrl: `${G}/lat_pulldown.gif`,
     instructions: [
       "Wide grip on bar, lean back slightly",
       "Pull bar to upper chest driving elbows down",
@@ -537,7 +537,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "chest_triceps",
     equipment: "cable",
     type: "gym",
-    gifUrl: `${G}/Cable-Crossover/images/0.jpg`,
+    gifUrl: `${G}/cable_fly.gif`,
     instructions: [
       "Set cables at shoulder height",
       "Step forward, arms wide with elbow bend",
@@ -554,7 +554,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "legs",
     equipment: "machine",
     type: "gym",
-    gifUrl: `${G}/Leg-Press/images/0.jpg`,
+    gifUrl: `${G}/leg_press.gif`,
     instructions: [
       "Feet hip-width on platform",
       "Release safety and lower platform",
@@ -571,7 +571,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "chest_triceps",
     equipment: "cable",
     type: "gym",
-    gifUrl: `${G}/Triceps-Pushdown/images/0.jpg`,
+    gifUrl: `${G}/tricep_pushdown.gif`,
     instructions: [
       "Cable at face height, use rope or bar",
       "Elbows pinned to sides",
@@ -588,7 +588,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "shoulders",
     equipment: "cable",
     type: "gym",
-    gifUrl: `${G}/Face-Pull/images/0.jpg`,
+    gifUrl: `${G}/face_pull.gif`,
     instructions: [
       "Cable at face height with rope",
       "Pull rope to face, elbows flared high",
@@ -605,7 +605,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "back_biceps",
     equipment: "cable",
     type: "gym",
-    gifUrl: `${G}/Seated-Cable-Row/images/0.jpg`,
+    gifUrl: `${G}/cable_row.gif`,
     instructions: [
       "Sit at cable machine, feet on platform",
       "Grip handle with both hands",
@@ -622,7 +622,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "chest_triceps",
     equipment: "dumbbell",
     type: "gym",
-    gifUrl: `${G}/Incline-Dumbbell-Press/images/0.jpg`,
+    gifUrl: `${G}/incline_db_press.gif`,
     instructions: [
       "Set bench to 30-45°",
       "Dumbbells at chest, press upward",
@@ -639,7 +639,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     muscleGroup: "glutes_hamstrings",
     equipment: "machine",
     type: "gym",
-    gifUrl: `${G}/Lying-Leg-Curl/images/0.jpg`,
+    gifUrl: `${G}/leg_curl.gif`,
     instructions: [
       "Lie face down, pad just above heels",
       "Curl legs toward glutes",

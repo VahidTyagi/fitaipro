@@ -147,33 +147,11 @@ function WeekStrip({ workoutsDoneToday }: { workoutsDoneToday: boolean }) {
 }
 
 // Small thumbnail for exercise list rows
-function ExerciseThumbnail({ exerciseId, gifUrl, name }: { exerciseId: string; gifUrl: string | null; name: string }) {
-  // Use GitHub raw frame 0 as thumbnail (static, always loads)
-  const GITHUB_BASE = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
-  const FOLDERS: Record<string, string> = {
-    pushup: "Push-Up", squat_bw: "Bodyweight-Squat", plank: "Plank",
-    lunge_bw: "Lunge", mountain_climber: "Mountain-Climber", burpee: "Burpee",
-    glute_bridge: "Glute-Bridge", jumping_jack: "Jumping-Jacks", crunches: "Crunch",
-    high_knees: "High-Knee-Run-in-Place", tricep_dip: "Triceps-Dip", superman: "Superman",
-    wall_sit: "Wall-Sit", leg_raise: "Leg-Raise", pike_pushup: "Pike-Push-Up",
-    db_bench_press: "Dumbbell-Bench-Press", db_row: "Bent-Over-Dumbbell-Row",
-    db_shoulder_press: "Dumbbell-Shoulder-Press", goblet_squat: "Goblet-Squat",
-    db_curl: "Dumbbell-Bicep-Curl", db_rdl: "Romanian-Deadlift",
-    db_lateral_raise: "Lateral-Raise", db_chest_fly: "Dumbbell-Flyes",
-    db_lunge: "Dumbbell-Lunge", db_tricep_ext: "Triceps-Extension",
-    barbell_bench: "Barbell-Bench-Press", deadlift: "Barbell-Deadlift",
-    squat_barbell: "Barbell-Back-Squat", overhead_press: "Barbell-Overhead-Press",
-    lat_pulldown: "Lat-Pulldown", cable_fly: "Cable-Crossover",
-    leg_press: "Leg-Press", tricep_pushdown: "Triceps-Pushdown",
-    face_pull: "Face-Pull", cable_row: "Seated-Cable-Row",
-    incline_db_press: "Incline-Dumbbell-Press", leg_curl: "Lying-Leg-Curl",
-  };
-
+// Replace the entire ExerciseThumbnail component with this simpler version:
+function ExerciseThumbnail({ exerciseId, name }: { exerciseId: string; name: string }) {
   const [err, setErr] = useState(false);
-  const folder = FOLDERS[exerciseId];
-  const src = !err && folder ? `${GITHUB_BASE}/${folder}/images/0.jpg` : null;
 
-  if (!src) {
+  if (err || !exerciseId) {
     return (
       <div className="w-full h-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
         <span className="text-lg">💪</span>
@@ -183,7 +161,7 @@ function ExerciseThumbnail({ exerciseId, gifUrl, name }: { exerciseId: string; g
 
   return (
     <img
-      src={src}
+      src={`/api/gif/${exerciseId}`}
       alt={name}
       className="w-full h-full object-cover"
       onError={() => setErr(true)}
@@ -387,7 +365,6 @@ export default function WorkoutPage() {
                   <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-gray-800">
                     <ExerciseThumbnail
                       exerciseId={ex.exerciseId}
-                      gifUrl={ex.gifUrl}
                       name={ex.name}
                     />
                   </div>
@@ -548,7 +525,7 @@ export default function WorkoutPage() {
             {workout.exercises.map((ex, i) => (
               <div key={i} className="flex items-center gap-3 bg-gray-800/40 rounded-xl p-3">
                 <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-700">
-                  <ExerciseThumbnail exerciseId={ex.exerciseId} gifUrl={ex.gifUrl} name={ex.name} />
+                  <ExerciseThumbnail exerciseId={ex.exerciseId} name={ex.name} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-white text-sm font-medium">{ex.name}</span>
