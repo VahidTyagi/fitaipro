@@ -56,9 +56,8 @@ export default function ExerciseGif({ exerciseId, gifUrl, name, muscle, size = "
   const [error, setError] = useState(false);
   const h = size === "sm" ? "h-36" : size === "lg" ? "h-64" : "h-52";
 
-  // Simple priority: local /gifs/exerciseId.gif > gifUrl prop
-  const localSrc = exerciseId ? `/gifs/${exerciseId}.gif` : null;
-  const src = localSrc || gifUrl || null;
+  // Use /api/gif proxy route — served by Vercel, fetches from GitHub server-side
+  const src = exerciseId ? `/api/gif/${exerciseId}` : gifUrl || null;
 
   useEffect(() => {
     setLoaded(false);
@@ -84,10 +83,7 @@ export default function ExerciseGif({ exerciseId, gifUrl, name, muscle, size = "
           loaded ? "opacity-100 z-20" : "opacity-0 z-0"
         }`}
         onLoad={() => setLoaded(true)}
-        onError={() => {
-          // If local gif fails, fallback card shows
-          setError(true);
-        }}
+        onError={() => setError(true)}
         loading="lazy"
       />
       {loaded && (

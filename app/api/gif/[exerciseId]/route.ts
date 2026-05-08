@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Maps exercise ID → GitHub folder name
 const EXERCISE_FOLDERS: Record<string, string> = {
   pushup:            "Push-Up",
   squat_bw:          "Bodyweight-Squat",
@@ -41,51 +40,50 @@ const EXERCISE_FOLDERS: Record<string, string> = {
   leg_curl:          "Lying-Leg-Curl",
 };
 
-const GITHUB_BASE = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
+const BASE = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
 
 export async function GET(
-  _request: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ exerciseId: string }> }
 ) {
-  const { exerciseId: rawExerciseId } = await params;
-  const exerciseId = rawExerciseId.replace(/\.(gif|jpg|png|webp)$/, "");
-  const folder = EXERCISE_FOLDERS[exerciseId];
+  const { exerciseId } = await params;
+  // Strip file extension if present
+  const id = exerciseId.replace(/\.(gif|jpg|jpeg|png|webp)$/i, "");
+  const folder = EXERCISE_FOLDERS[id];
 
   if (!folder) {
-    return new NextResponse("Exercise not found", { status: 404 });
+    return new NextResponse("Not found", { status: 404 });
   }
 
-  // Try frame 0 first (start position)
-  const imageUrl = `${GITHUB_BASE}/${folder}/images/0.jpg`;
+  const imageUrl = `${BASE}/${folder}/images/0.jpg`;
 
   try {
-    const response = await fetch(imageUrl, {
+    const res = await fetch(imageUrl, {
       headers: {
         "User-Agent": "FitAIPro/1.0",
-        "Accept": "image/*",
+        "Accept": "image/*,*/*",
       },
-      // 10 second timeout
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(12000),
     });
 
-    if (!response.ok) {
-      return new NextResponse("Image not found", { status: 404 });
+    if (!res.ok) {
+      console.error(`GitHub fetch failed for ${id}: ${res.status}`);
+      return new NextResponse("Image unavailable", { status: 502 });
     }
 
-    const imageBuffer = await response.arrayBuffer();
-    const contentType = response.headers.get("content-type") || "image/jpeg";
+    const buffer = await res.arrayBuffer();
+    const contentType = res.headers.get("content-type") || "image/jpeg";
 
-    return new NextResponse(imageBuffer, {
+    return new NextResponse(buffer, {
       status: 200,
       headers: {
         "Content-Type": contentType,
-        // Cache for 7 days — Vercel edge will cache this
-        "Cache-Control": "public, max-age=604800, immutable",
-        "X-Exercise-Id": exerciseId,
+        "Cache-Control": "public, max-age=2592000, immutable", // 30 days
+        "Access-Control-Allow-Origin": "*",
       },
     });
-  } catch (error) {
-    console.error(`Failed to fetch exercise image for ${exerciseId}:`, error);
-    return new NextResponse("Failed to fetch image", { status: 500 });
+  } catch (err: any) {
+    console.error(`GIF proxy error for ${id}:`, err.message);
+    return new NextResponse("Fetch timeout", { status: 504 });
   }
 }

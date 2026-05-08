@@ -10,8 +10,8 @@ async function callGroq(prompt: string): Promise<string> {
   const res = await groq.chat.completions.create({
     model: "llama-3.1-8b-instant",
     messages: [{ role: "user", content: prompt }],
-    temperature: 0.7,
-    max_tokens: 3500,
+    temperature: 0.6,
+    max_tokens: 4000,  // Reduced to prevent truncation
   });
   const text = res.choices[0]?.message?.content || "";
   if (!text) throw new Error("Empty Groq response");
@@ -29,12 +29,105 @@ async function callGemini(prompt: string): Promise<string> {
   return text;
 }
 
-const DIET_RULES: Record<string, string> = {
-  vegetarian:     "STRICTLY vegetarian. Use paneer, dal, curd, eggs optional. NO meat or fish.",
-  non_vegetarian: "Include chicken, fish, eggs along with dal, paneer, curd.",
-  vegan:          "STRICTLY vegan. NO dairy, NO eggs, NO meat. Use tofu, soy milk, legumes.",
-  no_preference:  "Healthy mix of balanced Indian foods.",
-};
+function buildPrompt(
+  gender: string,
+  age: number,
+  goal: string,
+  dietType: string,
+  currentWeight: number,
+  targetWeight: number,
+  daysToGenerate: number
+): string {
+  const isWeightLoss = targetWeight < currentWeight;
+  const isFemale = gender === "female";
+
+  const calorieRange = isFemale
+    ? isWeightLoss ? "1200-1500" : "1800-2100"
+    : isWeightLoss ? "1400-1700" : "2200-2600";
+
+  const proteinRange = isFemale
+    ? isWeightLoss ? "70-90" : "100-120"
+    : isWeightLoss ? "80-100" : "120-150";
+
+  const dietRules: Record<string, string> = {
+    vegetarian:     "Vegetarian only. Use paneer, dal, curd, eggs, tofu. No meat.",
+    non_vegetarian: "Include chicken, fish, eggs, dal, paneer.",
+    vegan:          "Strictly vegan. No dairy, no eggs, no meat.",
+    no_preference:  "Healthy balanced Indian diet.",
+  };
+
+  return `Indian nutritionist creating a ${daysToGenerate}-day meal plan.
+
+User: ${gender}, age ${age}, ${currentWeight}kg → ${targetWeight}kg, goal: ${goal}
+Diet: ${dietRules[dietType] || dietRules.no_preference}
+Calories: ${calorieRange} kcal/day, Protein: ${proteinRange}g/day
+
+IMPORTANT: Return ONLY valid compact JSON. No markdown, no explanation.
+Keep meal names SHORT (max 5 words). Keep descriptions minimal.
+
+{
+  "targetCalories": 1600,
+  "targetProtein": 90,
+  "planDays": ${daysToGenerate},
+  "days": [
+    {
+      "day": 1,
+      "totalCalories": 1580,
+      "totalProtein": 88,
+      "meals": [
+        {
+          "type": "Breakfast",
+          "name": "Moong dal chilla",
+          "calories": 320,
+          "protein": 18,
+          "carbs": 42,
+          "fat": 6,
+          "quantity": "2 chillas + 2 tbsp chutney",
+          "qualityScore": "Excellent",
+          "timing": "7-9 AM",
+          "whyGood": "High protein morning meal",
+          "avoid": "Skip fried sides"
+        }
+      ]
+    }
+  ]
+}`;
+}
+
+function safeParseJSON(text: string): any {
+  // Clean the response
+  let cleaned = text
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "") // Remove control chars
+    .trim();
+
+  // Find the JSON object
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+
+  if (start === -1 || end === -1) {
+    throw new Error("No JSON object found in response");
+  }
+
+  cleaned = cleaned.slice(start, end + 1);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (e: any) {
+    // Try to fix common JSON issues
+    // Fix trailing commas
+    cleaned = cleaned
+      .replace(/,\s*}/g, "}")
+      .replace(/,\s*]/g, "]");
+
+    try {
+      return JSON.parse(cleaned);
+    } catch (e2: any) {
+      throw new Error(`JSON parse failed: ${e2.message}`);
+    }
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -43,7 +136,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ← READ BODY ONCE only
+    // Read body once
     let forceRegenerate = false;
     try {
       const body = await req.json();
@@ -59,7 +152,6 @@ export async function POST(req: Request) {
 
     const status = getSubscriptionStatus(dbUser);
 
-    // Access control
     if (!status.isPaid && !status.isTrialActive) {
       return NextResponse.json({
         error: "access_denied",
@@ -70,7 +162,7 @@ export async function POST(req: Request) {
 
     const planDays = status.isPaid ? 30 : 7;
 
-    // Return cached if not forcing
+    // Return cached unless forced
     if (!forceRegenerate && dbUser.nutritionPlanData) {
       return NextResponse.json({
         success: true,
@@ -80,69 +172,18 @@ export async function POST(req: Request) {
       });
     }
 
-    // Build prompt
-    const goal = dbUser.goal || "stay_fit";
-    const dietType = dbUser.dietType || "vegetarian";
-    const gender = dbUser.gender || "male";
-    const age = dbUser.age || 25;
-    const currentWeight = dbUser.currentWeight || 70;
-    const targetWeight = dbUser.targetWeight || 65;
-    const isWeightLoss = targetWeight < currentWeight;
-    const dietRule = DIET_RULES[dietType] || DIET_RULES.no_preference;
-
-    let calorieRange = isWeightLoss ? "1400-1700" : "2200-2600";
-    let proteinRange = isWeightLoss ? "80-100g" : "120-150g";
-    if (gender === "female") {
-      calorieRange = isWeightLoss ? "1200-1500" : "1800-2100";
-      proteinRange = isWeightLoss ? "70-90g" : "100-120g";
-    }
-
-    const prompt = `You are an expert Indian nutritionist.
-
-USER:
-- Gender: ${gender}, Age: ${age}
-- Goal: ${goal.replace(/_/g, " ")}, Diet: ${dietType}
-- Weight: ${currentWeight}kg → Target: ${targetWeight}kg
-- Rule: ${dietRule}
-
-Create a ${planDays}-day Indian meal plan.
-
-RULES:
-1. Heavier carbs at breakfast/lunch, lighter dinner
-2. ${dietRule}
-3. Daily calories: ${calorieRange}
-4. Daily protein: ${proteinRange}
-5. Use authentic Indian foods with exact quantities
-6. For each meal: qualityScore (Poor/Moderate/Good/Excellent), timing (best time), whyGood (1 line), avoid (what not to pair)
-
-Return ONLY valid JSON, no extra text:
-{
-  "targetCalories": 1600,
-  "targetProtein": 90,
-  "planDays": ${planDays},
-  "days": [
-    {
-      "day": 1,
-      "totalCalories": 1580,
-      "totalProtein": 88,
-      "meals": [
-        {
-          "type": "Breakfast",
-          "name": "Moong dal chilla with mint chutney",
-          "calories": 320,
-          "protein": 18,
-          "carbs": 42,
-          "fat": 6,
-          "quantity": "2 chillas + 2 tbsp chutney",
-          "qualityScore": "Excellent",
-          "timing": "7-9 AM",
-          "whyGood": "High protein, easy to digest in morning",
-          "avoid": "Avoid with fried snacks"
-        }
-      ]
-    }
-  ]
-}`;
+    // Generate 3 days at a time to avoid JSON truncation
+    // Then duplicate/rotate for full plan
+    const DAYS_PER_BATCH = 3;
+    const prompt = buildPrompt(
+      dbUser.gender || "male",
+      dbUser.age || 25,
+      (dbUser.goal || "stay_fit").replace(/_/g, " "),
+      dbUser.dietType || "vegetarian",
+      dbUser.currentWeight || 70,
+      dbUser.targetWeight || 65,
+      DAYS_PER_BATCH
+    );
 
     let responseText = "";
     let aiUsed = "";
@@ -164,31 +205,39 @@ Return ONLY valid JSON, no extra text:
       }
     }
 
-    // Parse AI response
-    const cleaned = responseText
-      .replace(/```json\n?/g, "")
-      .replace(/```\n?/g, "")
-      .trim();
-
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error("No JSON found in AI response:", cleaned.slice(0, 200));
+    let basePlan: any;
+    try {
+      basePlan = safeParseJSON(responseText);
+    } catch (parseErr: any) {
+      console.error("Parse error. Raw response (first 500):", responseText.slice(0, 500));
       return NextResponse.json(
         { error: "AI returned invalid format. Please try again." },
         { status: 500 }
       );
     }
 
-    let mealPlan: any;
-    try {
-      mealPlan = JSON.parse(jsonMatch[0]);
-    } catch (parseErr) {
-      console.error("JSON parse error:", parseErr);
+    if (!basePlan.days || !Array.isArray(basePlan.days) || basePlan.days.length === 0) {
       return NextResponse.json(
-        { error: "Failed to parse AI response. Please try again." },
+        { error: "AI response missing meal data. Please try again." },
         { status: 500 }
       );
     }
+
+    // Expand to full plan days by rotating the 3-day base
+    const fullDays = [];
+    for (let i = 0; i < planDays; i++) {
+      const baseDay = basePlan.days[i % basePlan.days.length];
+      fullDays.push({
+        ...baseDay,
+        day: i + 1,
+      });
+    }
+
+    const mealPlan = {
+      ...basePlan,
+      planDays,
+      days: fullDays,
+    };
 
     // Save to DB
     await prisma.user.update({
@@ -215,3 +264,4 @@ Return ONLY valid JSON, no extra text:
     );
   }
 }
+
