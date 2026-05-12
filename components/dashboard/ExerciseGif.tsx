@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import ExerciseAnimation from "./ExerciseAnimation";
 
 interface Props {
   exerciseId?: string;
@@ -10,87 +11,45 @@ interface Props {
   size?: "sm" | "md" | "lg";
 }
 
-const MUSCLE_STYLE: Record<string, { gradient: string; emoji: string }> = {
-  chest:       { gradient: "from-red-500 to-rose-700",      emoji: "💪" },
-  back:        { gradient: "from-blue-500 to-indigo-700",   emoji: "🔙" },
-  shoulders:   { gradient: "from-purple-500 to-violet-700", emoji: "🏋️" },
-  biceps:      { gradient: "from-orange-500 to-amber-700",  emoji: "💪" },
-  triceps:     { gradient: "from-yellow-500 to-orange-600", emoji: "💪" },
-  quads:       { gradient: "from-green-500 to-emerald-700", emoji: "🦵" },
-  legs:        { gradient: "from-green-500 to-teal-700",    emoji: "🦵" },
-  glutes:      { gradient: "from-pink-500 to-rose-700",     emoji: "🍑" },
-  hamstrings:  { gradient: "from-lime-500 to-green-700",    emoji: "🦵" },
-  abs:         { gradient: "from-indigo-500 to-blue-700",   emoji: "⚡" },
-  cardio:      { gradient: "from-rose-500 to-red-700",      emoji: "❤️" },
-  "full body": { gradient: "from-emerald-500 to-teal-700",  emoji: "🔥" },
-};
-
-function FallbackCard({ name, muscle, size }: { name: string; muscle: string; size: string }) {
-  const [frame, setFrame] = useState(0);
-  const style = MUSCLE_STYLE[muscle.toLowerCase()] ?? { gradient: "from-emerald-500 to-teal-700", emoji: "💪" };
-  const h = size === "sm" ? "h-36" : size === "lg" ? "h-64" : "h-52";
-  const scales = ["scale-100", "scale-110", "scale-125", "scale-110"];
-
-  useEffect(() => {
-    const t = setInterval(() => setFrame((f) => (f + 1) % 4), 700);
-    return () => clearInterval(t);
-  }, []);
-
-  return (
-    <div className={`w-full ${h} bg-gradient-to-br ${style.gradient} rounded-2xl flex flex-col items-center justify-center relative overflow-hidden select-none`}>
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-28 h-28 rounded-full bg-white/10 animate-ping" style={{ animationDuration: "2s" }} />
-        <div className="absolute w-20 h-20 rounded-full bg-white/10 animate-pulse" />
-      </div>
-      <span className={`text-5xl mb-2 relative z-10 transition-transform duration-300 ${scales[frame]}`}>
-        {style.emoji}
-      </span>
-      <p className="text-white font-bold text-sm relative z-10 px-3 text-center">{name}</p>
-      <p className="text-white/70 text-xs relative z-10 mt-1">See instructions ↓</p>
-    </div>
-  );
-}
-
 export default function ExerciseGif({ exerciseId, gifUrl, name, muscle, size = "md" }: Props) {
-  const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const h = size === "sm" ? "h-36" : size === "lg" ? "h-64" : "h-52";
 
-  // Use /api/gif proxy route — served by Vercel, fetches from GitHub server-side
-  const src = exerciseId ? `/api/gif/${exerciseId}` : gifUrl || null;
-
-  useEffect(() => {
-    setLoaded(false);
-    setError(false);
-  }, [src]);
-
-  if (!src || error) {
-    return <FallbackCard name={name} muscle={muscle} size={size} />;
-  }
+  // Try to load image from API proxy
+  // If it fails or is slow → SVG animation shows (it's always there underneath)
+  const imgSrc = exerciseId ? `/api/gif/${exerciseId}` : null;
 
   return (
-    <div className={`w-full ${h} bg-gray-800 rounded-2xl overflow-hidden relative`}>
-      {!loaded && (
-        <div className="absolute inset-0 z-10">
-          <FallbackCard name={name} muscle={muscle} size={size} />
-        </div>
+    <div className={`w-full ${h} rounded-2xl overflow-hidden relative`}>
+      {/* SVG Animation — always visible as primary */}
+      <div className={`absolute inset-0 z-10 transition-opacity duration-500 ${imgLoaded ? "opacity-0" : "opacity-100"}`}>
+        <ExerciseAnimation
+          exerciseId={exerciseId}
+          name={name}
+          muscle={muscle}
+          size={size}
+        />
+      </div>
+
+      {/* Real image — loads on top when available */}
+      {imgSrc && !imgError && (
+        <img
+          src={imgSrc}
+          alt={`${name} demonstration`}
+          className={`absolute inset-0 w-full h-full object-cover z-20 transition-opacity duration-700 ${
+            imgLoaded ? "opacity-100" : "opacity-0"
+          }`}
+          onLoad={() => setImgLoaded(true)}
+          onError={() => setImgError(true)}
+          loading="lazy"
+        />
       )}
-      <img
-        key={src}
-        src={src}
-        alt={`${name} demonstration`}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
-          loaded ? "opacity-100 z-20" : "opacity-0 z-0"
-        }`}
-        onLoad={() => setLoaded(true)}
-        onError={() => setError(true)}
-        loading="lazy"
-      />
-      {loaded && (
-        <div className="absolute top-2 left-2 z-30 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full font-medium">
-          {muscle}
-        </div>
-      )}
+
+      {/* Muscle badge */}
+      <div className="absolute top-2 left-2 z-30 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full font-medium">
+        {muscle}
+      </div>
     </div>
   );
 }

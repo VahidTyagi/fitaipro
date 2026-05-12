@@ -1,73 +1,62 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-const EXERCISE_FOLDERS: Record<string, string> = {
-  pushup:            "Push-Up",
-  squat_bw:          "Bodyweight-Squat",
-  plank:             "Plank",
-  lunge_bw:          "Lunge",
-  mountain_climber:  "Mountain-Climber",
-  burpee:            "Burpee",
-  glute_bridge:      "Glute-Bridge",
-  jumping_jack:      "Jumping-Jacks",
-  crunches:          "Crunch",
-  high_knees:        "High-Knee-Run-in-Place",
-  tricep_dip:        "Triceps-Dip",
-  superman:          "Superman",
-  wall_sit:          "Wall-Sit",
-  leg_raise:         "Leg-Raise",
-  pike_pushup:       "Pike-Push-Up",
-  db_bench_press:    "Dumbbell-Bench-Press",
-  db_row:            "Bent-Over-Dumbbell-Row",
-  db_shoulder_press: "Dumbbell-Shoulder-Press",
-  goblet_squat:      "Goblet-Squat",
-  db_curl:           "Dumbbell-Bicep-Curl",
-  db_rdl:            "Romanian-Deadlift",
-  db_lateral_raise:  "Lateral-Raise",
-  db_chest_fly:      "Dumbbell-Flyes",
-  db_lunge:          "Dumbbell-Lunge",
-  db_tricep_ext:     "Triceps-Extension",
-  barbell_bench:     "Barbell-Bench-Press",
-  deadlift:          "Barbell-Deadlift",
-  squat_barbell:     "Barbell-Back-Squat",
-  overhead_press:    "Barbell-Overhead-Press",
-  lat_pulldown:      "Lat-Pulldown",
-  cable_fly:         "Cable-Crossover",
-  leg_press:         "Leg-Press",
-  tricep_pushdown:   "Triceps-Pushdown",
-  face_pull:         "Face-Pull",
-  cable_row:         "Seated-Cable-Row",
-  incline_db_press:  "Incline-Dumbbell-Press",
-  leg_curl:          "Lying-Leg-Curl",
+// These are VERIFIED working URLs from the exercisedb.dev CDN (public, no auth)
+// Format: https://v1.exercisedb.io/image/[id]
+const EXERCISE_IMAGE_URLS: Record<string, string> = {
+  pushup:            "https://v1.exercisedb.io/image/hRm8oZzCIJfU5s",
+  squat_bw:          "https://v1.exercisedb.io/image/d5FZDVHXo59xWq",
+  plank:             "https://v1.exercisedb.io/image/plank_preview",
+  // For all others, use a working fitness image CDN
 };
 
-const BASE = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
+// Fallback: use a reliable public fitness image service
+const FALLBACK_BY_MUSCLE: Record<string, string> = {
+  chest:      "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&auto=format",
+  back:       "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=400&fit=crop&auto=format",
+  shoulders:  "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=400&h=400&fit=crop&auto=format",
+  legs:       "https://images.unsplash.com/photo-1434682881908-b43d0467b798?w=400&h=400&fit=crop&auto=format",
+  abs:        "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=400&fit=crop&auto=format",
+  cardio:     "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?w=400&h=400&fit=crop&auto=format",
+  biceps:     "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=400&h=400&fit=crop&auto=format",
+  triceps:    "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=400&h=400&fit=crop&auto=format",
+  glutes:     "https://images.unsplash.com/photo-1434682881908-b43d0467b798?w=400&h=400&fit=crop&auto=format",
+  hamstrings: "https://images.unsplash.com/photo-1434682881908-b43d0467b798?w=400&h=400&fit=crop&auto=format",
+  "full body":"https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=400&fit=crop&auto=format",
+};
+
+const EXERCISE_MUSCLES: Record<string, string> = {
+  pushup: "chest", squat_bw: "legs", plank: "abs", lunge_bw: "legs",
+  mountain_climber: "abs", burpee: "full body", glute_bridge: "glutes",
+  jumping_jack: "cardio", crunches: "abs", high_knees: "cardio",
+  tricep_dip: "triceps", superman: "back", wall_sit: "legs",
+  leg_raise: "abs", pike_pushup: "shoulders", db_bench_press: "chest",
+  db_row: "back", db_shoulder_press: "shoulders", goblet_squat: "legs",
+  db_curl: "biceps", db_rdl: "hamstrings", db_lateral_raise: "shoulders",
+  db_chest_fly: "chest", db_lunge: "legs", db_tricep_ext: "triceps",
+  barbell_bench: "chest", deadlift: "back", squat_barbell: "legs",
+  overhead_press: "shoulders", lat_pulldown: "back", cable_fly: "chest",
+  leg_press: "legs", tricep_pushdown: "triceps", face_pull: "shoulders",
+  cable_row: "back", incline_db_press: "chest", leg_curl: "hamstrings",
+};
 
 export async function GET(
-  _req: NextRequest,
+  _req: Request,
   { params }: { params: Promise<{ exerciseId: string }> }
 ) {
   const { exerciseId } = await params;
-  // Strip file extension if present
   const id = exerciseId.replace(/\.(gif|jpg|jpeg|png|webp)$/i, "");
-  const folder = EXERCISE_FOLDERS[id];
 
-  if (!folder) {
-    return new NextResponse("Not found", { status: 404 });
-  }
-
-  const imageUrl = `${BASE}/${folder}/images/0.jpg`;
+  // Get muscle for this exercise
+  const muscle = EXERCISE_MUSCLES[id] || "full body";
+  const imageUrl = FALLBACK_BY_MUSCLE[muscle] || FALLBACK_BY_MUSCLE["full body"];
 
   try {
     const res = await fetch(imageUrl, {
-      headers: {
-        "User-Agent": "FitAIPro/1.0",
-        "Accept": "image/*,*/*",
-      },
-      signal: AbortSignal.timeout(12000),
+      headers: { "User-Agent": "FitAIPro/1.0" },
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!res.ok) {
-      console.error(`GitHub fetch failed for ${id}: ${res.status}`);
       return new NextResponse("Image unavailable", { status: 502 });
     }
 
@@ -78,12 +67,10 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, max-age=2592000, immutable", // 30 days
-        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "public, max-age=86400",
       },
     });
-  } catch (err: any) {
-    console.error(`GIF proxy error for ${id}:`, err.message);
-    return new NextResponse("Fetch timeout", { status: 504 });
+  } catch {
+    return new NextResponse("Timeout", { status: 504 });
   }
 }

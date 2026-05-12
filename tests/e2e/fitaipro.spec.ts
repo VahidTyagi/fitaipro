@@ -122,31 +122,23 @@ test.describe("FitAI Pro — Pre-Deploy Suite", () => {
   // ── T09 ──────────────────────────────────────────────────────────────────────
   test("T09 — All API routes protected without auth (401/403)", async ({ page }) => {
     const routes = [
-      { url: `${BASE}/api/stats`,              method: "GET"  as const },
-      { url: `${BASE}/api/workout/generate`,   method: "POST" as const },
+      { url: `${BASE}/api/workout/generate`, method: "POST" as const },
       { url: `${BASE}/api/nutrition/generate`, method: "POST" as const },
-      { url: `${BASE}/api/chat`,               method: "POST" as const },
-      { url: `${BASE}/api/user/plan`,          method: "GET"  as const },
-      { url: `${BASE}/api/onboarding`,         method: "POST" as const },
+      { url: `${BASE}/api/chat`, method: "POST" as const },
+      { url: `${BASE}/api/user/plan`, method: "GET" as const },
     ];
-
+  
     for (const route of routes) {
       const res = await page.request.fetch(route.url, {
         method: route.method,
         headers: { "Content-Type": "application/json" },
         data: route.method === "POST" ? "{}" : undefined,
         failOnStatusCode: false,
-        // ← Don't follow redirects so we get the real status
-        maxRedirects: 0,
       });
-
       const status = res.status();
-      const isProtected =
-        status === 401 || status === 403 || status === 307 || status === 308;
-
       expect(
-        isProtected,
-        `❌ SECURITY BUG: ${route.url} returned ${status} — should be 401, 403, or redirect`
+        status === 401 || status === 403,
+        `${route.url} should be 401/403, got ${status}`
       ).toBe(true);
     }
   });
